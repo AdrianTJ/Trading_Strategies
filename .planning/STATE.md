@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated March 25, 2026)
 Phase: 1 of 4 (Foundation & Data Sync)
 Plan: 0 of 0 in current phase
 Status: Phase 1 ready to plan
-Last activity: 2026-03-25 — Project initialized
+Last activity: 2026-03-25 — Phase 1 context gathered
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -42,9 +42,12 @@ Progress: [░░░░░░░░░░] 0%
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [Phase 1]: Data persistence: SQLite with SQLModel ORM.
+- [Phase 1]: Sync strategy: 5-year full sync using 'fredapi' library.
+- [Phase 1]: Data alignment: Daily upsampling (FFill) with point-in-time integrity.
 - [Init]: Historical scope: Last 5 years.
 - [Init]: Focus on US Bonds, Gold, and S&P 500.
-- [Init]: Tech stack: Python (FastAPI/Pandas) + React + TimescaleDB.
+- [Init]: Tech stack: Python (FastAPI/Pandas) + React + TimescaleDB (Migrating to SQLite for Phase 1).
 
 ### Pending Todos
 
