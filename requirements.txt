@@ -1,0 +1,9 @@
+sqlmodel
+fredapi
+pandas
+numpy
+fastapi
+uvicorn
+python-dotenv
+pytest
+httpx
