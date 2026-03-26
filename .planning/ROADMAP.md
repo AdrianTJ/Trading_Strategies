@@ -6,12 +6,12 @@
 
 ## Phases
 
-### Phase 1: Foundation & Data Sync
+### Phase 1: Foundation & Data Sync (✓ Complete 2026-03-25)
 **Goal**: Establish the data ingestion pipeline and local caching system.
-- [ ] DATA-01: Automated sync with FRED API for S&P 500, Gold, and US Bonds.
-- [ ] DATA-02: Fetch and store CPI for "Real Return" calculations.
-- [ ] DATA-03: Local persistent storage (SQL) for all fetched historical data.
-- [ ] DATA-04: Data alignment logic to merge monthly FRED series with daily price data.
+- [x] DATA-01: Automated sync with FRED API for S&P 500, Gold, and US Bonds.
+- [x] DATA-02: Fetch and store CPI for "Real Return" calculations.
+- [x] DATA-03: Local persistent storage (SQL) for all fetched historical data.
+- [x] DATA-04: Data alignment logic to merge monthly FRED series with daily price data.
 
 **Success Criteria**:
 - System can successfully pull historical series from FRED API.
