@@ -25,3 +25,14 @@ class FredClient:
             start_date = datetime.now() - timedelta(days=5*365)
         
         return self.fred.get_series(series_id, observation_start=start_date)
+
+class SyncManager:
+    def __init__(self, client: FredClient, session):
+        self.client = client
+        self.session = session
+
+    def sync_series(self, series_id: str):
+        """Sync metadata and observations for a series."""
+        # This will be implemented in scripts/sync_data.py for Task 3
+        # but the SyncManager will provide the core logic.
+        pass
