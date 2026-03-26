@@ -1,5 +1,6 @@
 import os
 import sys
+import pandas as pd
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
