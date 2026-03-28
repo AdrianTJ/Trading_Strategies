@@ -150,7 +150,7 @@ This project uses **learnship**. Key facts:
 ## Current Phase
 
 **Milestone:** v1.0 — Initial Prototype
-**Phase:** 2 — Core Simulation Engine
+**Phase:** 2 — Core Simulation Engine ✓ complete → Phase 3 — Analytics & Performance Visuals
 **Status:** planning
 **Last updated:** 2026-03-25
 

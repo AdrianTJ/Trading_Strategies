@@ -18,12 +18,12 @@
 - Data is stored in a local database and accessible for querying.
 - Monthly and daily data are correctly aligned in a single time-series view.
 
-### Phase 2: Core Simulation Engine
+### Phase 2: Core Simulation Engine (✓ Complete 2026-03-25)
 **Goal**: Build the logic to calculate strategy performance.
-- [ ] STRAT-01: Vectorized simulation engine for Weekly/Monthly DCA.
-- [ ] STRAT-02: Simulator for Lump Sum strategy.
-- [ ] STRAT-03: Simulator for "Buy the Dip" (5%) strategy.
-- [ ] STRAT-04: Transaction cost simulator (fees/commissions).
+- [x] STRAT-01: Vectorized simulation engine for Weekly/Monthly DCA.
+- [x] STRAT-02: Simulator for Lump Sum strategy.
+- [x] STRAT-03: Simulator for "Buy the Dip" (5%) strategy.
+- [x] STRAT-04: Transaction cost simulator (fees/commissions).
 
 **Success Criteria**:
 - Engine can calculate P&L for all three strategies over a 5-year period.
