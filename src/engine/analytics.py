@@ -20,18 +20,20 @@ def calculate_sharpe_ratio(daily_returns: pd.Series, risk_free_rate: float = 0.0
     # Convert annual risk-free rate to daily
     daily_rf = (1 + risk_free_rate) ** (1/252) - 1
     excess_returns = daily_returns - daily_rf
-    if excess_returns.std() == 0:
+    std = excess_returns.std()
+    if std < 1e-9:
         return 0.0
-    return (excess_returns.mean() / excess_returns.std()) * np.sqrt(252)
+    return (excess_returns.mean() / std) * np.sqrt(252)
 
 def calculate_sortino_ratio(daily_returns: pd.Series, risk_free_rate: float = 0.0) -> float:
     """Calculate the annualized Sortino Ratio."""
     daily_rf = (1 + risk_free_rate) ** (1/252) - 1
     excess_returns = daily_returns - daily_rf
     downside_returns = excess_returns[excess_returns < 0]
-    if downside_returns.std() == 0 or len(downside_returns) == 0:
+    std = downside_returns.std()
+    if std < 1e-9 or len(downside_returns) == 0:
         return 0.0
-    return (excess_returns.mean() / downside_returns.std()) * np.sqrt(252)
+    return (excess_returns.mean() / std) * np.sqrt(252)
 
 def calculate_real_returns(nominal_cum_return: float, start_cpi: float, end_cpi: float) -> float:
     """Adjust nominal returns for inflation using CPI."""
