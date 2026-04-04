@@ -30,22 +30,22 @@
 - Simulations account for transaction costs.
 - Results are consistent with manually verified benchmarks.
 
-### Phase 3: Analytics & Performance Visuals
+### Phase 3: Analytics & Performance Visuals (✓ Complete 2026-04-03)
 **Goal**: Create the user interface for visualizing strategy outcomes.
-- [ ] VIS-01: Line charts showing cumulative P&L.
-- [ ] VIS-02: Visualization for "Max Drawdown".
-- [ ] VIS-03: Tabular breakdown of monthly and annual returns.
+- [x] VIS-01: Line charts showing cumulative P&L.
+- [x] VIS-02: Visualization for "Max Drawdown".
+- [x] VIS-03: Tabular breakdown of monthly and annual returns.
 
 **Success Criteria**:
 - Users can see a clear equity curve for their selected strategy.
 - "Max pain" (drawdown) is visually represented.
 - Detailed return tables are available for inspection.
 
-### Phase 4: Benchmarking & Comparative Dashboard
+### Phase 4: Benchmarking & Comparative Dashboard (✓ Complete 2026-04-03)
 **Goal**: Compare strategies against industry standard benchmarks.
-- [ ] BENCH-01: S&P 500 Buy and Hold benchmark overlay.
-- [ ] BENCH-02: 60/40 Portfolio benchmark comparison.
-- [ ] BENCH-03: Advanced risk metrics: Sharpe Ratio, Sortino Ratio, and Max Drawdown.
+- [x] BENCH-01: S&P 500 Buy and Hold benchmark overlay.
+- [x] BENCH-02: 60/40 Portfolio benchmark comparison.
+- [x] BENCH-03: Advanced risk metrics: Sharpe Ratio, Sortino Ratio, and Max Drawdown.
 
 **Success Criteria**:
 - Users can compare their strategy directly against the S&P 500.

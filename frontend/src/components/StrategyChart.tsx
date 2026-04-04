@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { createChart, IChartApi, ColorType, LineStyle, CrosshairMode } from 'lightweight-charts';
+import React, { useEffect, useRef, useState } from 'react';
+import { createChart, IChartApi, ColorType, LineStyle, CrosshairMode, ISeriesApi } from 'lightweight-charts';
 import { DailyPerformance } from '../hooks/useSimulationData';
 
 interface StrategyChartProps {
@@ -12,7 +12,11 @@ export const StrategyChart: React.FC<StrategyChartProps> = ({ data, benchmarkDat
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const drawdownContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
-  const drawdownChartRef = useRef<IChartApi | null>(null);
+  const [hoverData, setHoverData] = useState<{
+    date: string;
+    strategyValue: number | null;
+    benchmarkValue: number | null;
+  } | null>(null);
 
   useEffect(() => {
     if (!chartContainerRef.current || !drawdownContainerRef.current || data.length === 0) return;
@@ -119,8 +123,18 @@ export const StrategyChart: React.FC<StrategyChartProps> = ({ data, benchmarkDat
     equityChart.subscribeCrosshairMove((param) => {
         if (param.point === undefined || !param.time) {
             drawdownChart.clearCrosshairPosition();
+            setHoverData(null);
         } else {
             drawdownChart.setCrosshairPosition(param.point, param.time, drawdownSeries);
+            
+            const strategyValue = param.seriesData.get(areaSeries);
+            const benchValue = benchmarkSeries ? param.seriesData.get(benchmarkSeries) : null;
+            
+            setHoverData({
+              date: param.time as string,
+              strategyValue: strategyValue ? (strategyValue as any).value : null,
+              benchmarkValue: benchValue ? (benchValue as any).value : null,
+            });
         }
     });
     drawdownChart.subscribeCrosshairMove((param) => {
@@ -151,8 +165,45 @@ export const StrategyChart: React.FC<StrategyChartProps> = ({ data, benchmarkDat
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800">
-        <h3 className="text-sm font-medium text-slate-400 mb-2">Equity Curve</h3>
+      <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800 relative">
+        <div className="flex justify-between items-start mb-2">
+          <h3 className="text-sm font-medium text-slate-400">Equity Curve (Indexed)</h3>
+          {hoverData && (
+            <div className="text-right">
+              <div className="text-xs text-slate-500 font-mono mb-1">{hoverData.date}</div>
+              <div className="flex gap-4">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-blue-500" />
+                  <span className="text-xs font-semibold text-white">
+                    Strategy: {hoverData.strategyValue?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  </span>
+                </div>
+                {benchmarkName && (
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-amber-500" />
+                    <span className="text-xs font-semibold text-white">
+                      {benchmarkName}: {hoverData.benchmarkValue?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          {!hoverData && (
+            <div className="flex gap-4">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-blue-500" />
+                <span className="text-xs font-medium text-slate-400">Strategy</span>
+              </div>
+              {benchmarkName && (
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-amber-500" />
+                  <span className="text-xs font-medium text-slate-400">{benchmarkName}</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
         <div ref={chartContainerRef} className="w-full" />
       </div>
       <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800">

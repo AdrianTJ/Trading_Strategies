@@ -36,7 +36,9 @@ def test_monthly_dca_simulation(sample_data):
     # Jan 1st is sample_data.index[0]
     # Jan 2nd execution
     assert results.iloc[1]['execute_buy'] == 1
-    assert results.iloc[1]['cash_balance'] == 9000.0
+    # Initial 10k is still cash, and 1k was added and invested
+    assert results.iloc[1]['cash_balance'] == 10000.0
+    assert results.iloc[1]['total_invested'] == 11000.0
     
     # 4 months total in 100 days
     assert signals.sum() >= 3

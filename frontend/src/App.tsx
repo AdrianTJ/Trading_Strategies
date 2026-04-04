@@ -8,6 +8,7 @@ import { useSimulationData, useBenchmarks, DailyPerformance, SimulationResult } 
 import { StrategyChart } from './components/StrategyChart';
 import { ReturnsMatrix } from './components/ReturnsMatrix';
 import { StatsGrid } from './components/StatsGrid';
+import { ComparisonTable } from './components/ComparisonTable';
 import { useEffect } from 'react';
 
 const queryClient = new QueryClient();
@@ -204,7 +205,13 @@ const Dashboard = () => {
                 benchmarkData={benchmarkPerformance} 
                 benchmarkName={benchmarkSimulation?.strategy_name}
               />
-              <ReturnsMatrix data={performance} />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <ComparisonTable 
+                  strategy={simulation} 
+                  benchmark={benchmarkSimulation} 
+                />
+                <ReturnsMatrix data={performance} />
+              </div>
             </div>
           </div>
         )}

@@ -54,6 +54,7 @@ export const StatsGrid: React.FC<StatsGridProps> = ({ simulation, benchmark }) =
       benchmarkValue: benchmark ? `${(benchmark.cagr * 100).toFixed(2)}%` : undefined,
       icon: <TrendingUp className="w-5 h-5 text-emerald-400" />,
       color: 'text-emerald-400',
+      tooltip: 'Compound Annual Growth Rate. The geometric mean return each year.',
     },
     {
       label: 'Sharpe Ratio',
@@ -77,6 +78,7 @@ export const StatsGrid: React.FC<StatsGridProps> = ({ simulation, benchmark }) =
       benchmarkValue: benchmark ? `${(benchmark.max_drawdown * 100).toFixed(2)}%` : undefined,
       icon: <AlertTriangle className="w-5 h-5 text-red-400" />,
       color: 'text-red-400',
+      tooltip: 'The maximum peak-to-trough decline during the investment period.',
     },
   ];
 
