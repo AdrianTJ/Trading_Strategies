@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated March 25, 2026)
 ## Current Position
 
 Phase: 4 of 4 (Benchmarking & Comparative Dashboard)
-Last activity: 2026-04-03 — Phase 4, Plan 1 (Backend Metrics) complete
-Plan: 1 of 3 in current phase
-Status: Plan 4-02 (Frontend Benchmarks) ready to execute
-Last activity: 2026-04-03 — Sharpe/Sortino implemented and benchmark generation added to backend.
+Last activity: 2026-04-03 — Phase 4, Plan 2 (Frontend Benchmarks) complete
+Plan: 2 of 3 in current phase
+Status: Plan 4-03 (Portfolio Aggregation) ready to execute
+Last activity: 2026-04-03 — Benchmarking overlay and comparative metrics added to UI.
 
-Progress: [▓▓▓▓▓▓▓▓▓░] 90%
+Progress: [▓▓▓▓▓▓▓▓▓▓] 95%
 
 ## Performance Metrics
 
