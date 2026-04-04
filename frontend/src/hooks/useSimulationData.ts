@@ -18,6 +18,7 @@ export interface SimulationResult {
   max_drawdown: number;
   real_total_return: number | null;
   real_cagr: number | null;
+  is_benchmark: boolean;
 }
 
 export interface DailyPerformance {
@@ -31,6 +32,28 @@ export interface DailyPerformance {
   daily_return: number;
   cumulative_return: number;
 }
+
+export const useBenchmarks = () => {
+  const benchmarksQuery = useQuery<SimulationResult[]>({
+    queryKey: ['benchmarks'],
+    queryFn: async () => {
+      const response = await axios.get(`${API_BASE_URL}/simulations`);
+      return response.data.filter((sim: SimulationResult) => sim.is_benchmark);
+    },
+  });
+
+  const fetchBenchmarkPerformance = async (simulationId: number) => {
+    const response = await axios.get(`${API_BASE_URL}/simulations/${simulationId}/performance`);
+    return response.data as DailyPerformance[];
+  };
+
+  return {
+    benchmarks: benchmarksQuery.data || [],
+    isLoading: benchmarksQuery.isLoading,
+    isError: benchmarksQuery.isError,
+    fetchBenchmarkPerformance,
+  };
+};
 
 export const useSimulationData = (strategyName: string, assetId: string) => {
   // Fetch all simulations to find the correct one
