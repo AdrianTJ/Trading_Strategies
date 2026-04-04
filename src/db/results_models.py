@@ -23,6 +23,9 @@ class SimulationResult(SQLModel, table=True):
     # Inflation Adjusted Metrics
     real_total_return: Optional[float] = None
     real_cagr: Optional[float] = None
+    
+    # Benchmarking
+    is_benchmark: bool = Field(default=False, index=True)
 
 class DailyPerformance(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
