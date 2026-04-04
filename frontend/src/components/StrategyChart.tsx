@@ -4,9 +4,11 @@ import { DailyPerformance } from '../hooks/useSimulationData';
 
 interface StrategyChartProps {
   data: DailyPerformance[];
+  benchmarkData?: DailyPerformance[];
+  benchmarkName?: string;
 }
 
-export const StrategyChart: React.FC<StrategyChartProps> = ({ data }) => {
+export const StrategyChart: React.FC<StrategyChartProps> = ({ data, benchmarkData, benchmarkName }) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const drawdownContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -52,6 +54,29 @@ export const StrategyChart: React.FC<StrategyChartProps> = ({ data }) => {
     }));
 
     areaSeries.setData(equityData);
+
+    // Benchmark Series
+    let benchmarkSeries: any = null;
+    if (benchmarkData && benchmarkData.length > 0) {
+      benchmarkSeries = equityChart.addLineSeries({
+        color: '#f59e0b',
+        lineWidth: 2,
+        lineStyle: LineStyle.Dashed,
+        title: benchmarkName || 'Benchmark',
+      });
+
+      const initialStrategyValue = data[0].portfolio_value;
+      const initialBenchmarkValue = benchmarkData[0].portfolio_value;
+      const normalizationFactor = initialStrategyValue / initialBenchmarkValue;
+
+      const benchmarkPoints = benchmarkData.map((d) => ({
+        time: d.date.split('T')[0],
+        value: d.portfolio_value * normalizationFactor,
+      }));
+
+      benchmarkSeries.setData(benchmarkPoints);
+    }
+
     equityChart.timeScale().fitContent();
 
     // Drawdown Chart
@@ -83,22 +108,6 @@ export const StrategyChart: React.FC<StrategyChartProps> = ({ data }) => {
     drawdownChart.timeScale().fitContent();
 
     // Synchronize crosshair and time scale
-    const syncCharts = (sourceChart: IChartApi, targetChart: IChartApi) => {
-      sourceChart.timeScale().subscribeVisibleTimeRangeChange((range) => {
-        targetChart.timeScale().setVisibleTimeRange(range!);
-      });
-
-      sourceChart.subscribeCrosshairMove((param) => {
-        if (!param.time) {
-          targetChart.clearCrosshairPosition();
-          return;
-        }
-        targetChart.setCrosshairPosition(param.point!, param.time!, sourceChart.series());
-      });
-    };
-
-    // Note: lightweight-charts 5.x setCrosshairPosition and series reference might differ.
-    // Simplified sync for time range
     equityChart.timeScale().subscribeVisibleTimeRangeChange((range) => {
       drawdownChart.timeScale().setVisibleTimeRange(range);
     });
@@ -138,7 +147,7 @@ export const StrategyChart: React.FC<StrategyChartProps> = ({ data }) => {
       equityChart.remove();
       drawdownChart.remove();
     };
-  }, [data]);
+  }, [data, benchmarkData, benchmarkName]);
 
   return (
     <div className="flex flex-col gap-4">
