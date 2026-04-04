@@ -4,10 +4,11 @@ import { LayoutDashboard, TrendingUp, DollarSign, Waves, RefreshCw, BarChart3, C
 import axios from 'axios';
 import { useState } from 'react';
 
-import { useSimulationData } from './hooks/useSimulationData';
+import { useSimulationData, useBenchmarks, DailyPerformance, SimulationResult } from './hooks/useSimulationData';
 import { StrategyChart } from './components/StrategyChart';
 import { ReturnsMatrix } from './components/ReturnsMatrix';
 import { StatsGrid } from './components/StatsGrid';
+import { useEffect } from 'react';
 
 const queryClient = new QueryClient();
 
@@ -79,7 +80,7 @@ const Sidebar = () => {
         </div>
       </nav>
       <div className="p-4 border-t border-slate-800">
-        <div className="text-xs text-slate-500 text-center font-medium">v1.0.0 — Phase 3</div>
+        <div className="text-xs text-slate-500 text-center font-medium">v1.0.0 — Phase 4</div>
       </div>
     </div>
   );
@@ -88,7 +89,25 @@ const Sidebar = () => {
 const Dashboard = () => {
   const { asset = 'sp500', strategy = 'lump-sum' } = useParams();
   const { simulation, performance, isLoading, isError, refetch } = useSimulationData(strategy, asset);
+  const { benchmarks, fetchBenchmarkPerformance } = useBenchmarks();
+  
   const [isSyncing, setIsSyncing] = useState(false);
+  const [selectedBenchmarkId, setSelectedBenchmarkId] = useState<number | null>(null);
+  const [benchmarkPerformance, setBenchmarkPerformance] = useState<DailyPerformance[]>([]);
+  const [benchmarkSimulation, setBenchmarkSimulation] = useState<SimulationResult | null>(null);
+
+  useEffect(() => {
+    if (selectedBenchmarkId) {
+      const benchmark = benchmarks.find(b => b.id === selectedBenchmarkId);
+      if (benchmark) {
+        setBenchmarkSimulation(benchmark);
+        fetchBenchmarkPerformance(selectedBenchmarkId).then(setBenchmarkPerformance);
+      }
+    } else {
+      setBenchmarkSimulation(null);
+      setBenchmarkPerformance([]);
+    }
+  }, [selectedBenchmarkId, benchmarks]);
 
   const handleSync = async () => {
     setIsSyncing(true);
@@ -120,7 +139,7 @@ const Dashboard = () => {
     <div className="flex h-screen bg-slate-950 text-slate-200">
       <Sidebar />
       <main className="flex-1 overflow-auto p-8">
-        <header className="mb-8 flex justify-between items-center">
+        <header className="mb-8 flex justify-between items-start">
           <div>
             <h2 className="text-3xl font-bold text-white capitalize flex items-center gap-2">
               {asset.replace('_', ' ')}
@@ -133,14 +152,29 @@ const Dashboard = () => {
                 : 'No simulation data found for this combination.'}
             </p>
           </div>
-          <button 
-            onClick={handleSync}
-            disabled={isSyncing}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-          >
-            <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-            {isSyncing ? 'Syncing...' : 'Sync Data'}
-          </button>
+          <div className="flex items-center gap-4">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider ml-1">Benchmark Overlay</label>
+              <select 
+                value={selectedBenchmarkId || ''} 
+                onChange={(e) => setSelectedBenchmarkId(e.target.value ? Number(e.target.value) : null)}
+                className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[180px]"
+              >
+                <option value="">None</option>
+                {benchmarks.map(b => (
+                  <option key={b.id} value={b.id}>{b.strategy_name}</option>
+                ))}
+              </select>
+            </div>
+            <button 
+              onClick={handleSync}
+              disabled={isSyncing}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 text-white px-4 py-2 rounded-lg font-medium transition-colors mt-5"
+            >
+              <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+              {isSyncing ? 'Syncing...' : 'Sync Data'}
+            </button>
+          </div>
         </header>
         
         {!simulation ? (
@@ -162,10 +196,14 @@ const Dashboard = () => {
           </div>
         ) : (
           <div className="space-y-8 animate-in fade-in duration-700">
-            <StatsGrid simulation={simulation} />
+            <StatsGrid simulation={simulation} benchmark={benchmarkSimulation} />
             
             <div className="grid grid-cols-1 gap-8">
-              <StrategyChart data={performance} />
+              <StrategyChart 
+                data={performance} 
+                benchmarkData={benchmarkPerformance} 
+                benchmarkName={benchmarkSimulation?.strategy_name}
+              />
               <ReturnsMatrix data={performance} />
             </div>
           </div>
