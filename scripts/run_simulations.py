@@ -26,10 +26,10 @@ from src.engine.analytics import (
 )
 
 STRATEGIES = {
-    "Lump Sum": generate_lump_sum_signals,
-    "Monthly DCA": generate_monthly_dca_signals,
-    "Weekly DCA": generate_weekly_dca_signals,
-    "5% Dip Buy": lambda df: generate_dip_buy_signals(df, -0.05)
+    "lump-sum": generate_lump_sum_signals,
+    "monthly-dca": generate_monthly_dca_signals,
+    "weekly-dca": generate_weekly_dca_signals,
+    "dip-buy": lambda df: generate_dip_buy_signals(df, -0.05)
 }
 
 ASSETS = ["sp500", "gold", "treasury_10y"]
@@ -68,14 +68,16 @@ def run_simulations(initial_cash: float = 10000.0):
             simulator = Simulator(initial_cash=initial_cash)
             
             # For DCA, we invest $1000 per signal
-            invest_amount = 1000.0 if "DCA" in strat_name else None
+            invest_amount = 1000.0 if "dca" in strat_name else None
             
             sim_df = simulator.run(asset_df, signals, invest_amount=invest_amount)
             
             # Calculate metrics
             total_ret = sim_df.iloc[-1]['cumulative_return']
+            total_invested = sim_df.iloc[-1]['total_invested']
+            final_value = sim_df.iloc[-1]['portfolio_value']
             days = (sim_df.index[-1] - sim_df.index[0]).days
-            cagr = calculate_cagr(initial_cash, sim_df.iloc[-1]['portfolio_value'], days)
+            cagr = calculate_cagr(total_invested, final_value, days)
             mdd = calculate_max_drawdown(sim_df['portfolio_value'])
             sharpe = calculate_sharpe_ratio(sim_df['daily_return'], rf_rate)
             sortino = calculate_sortino_ratio(sim_df['daily_return'], rf_rate)
@@ -85,8 +87,8 @@ def run_simulations(initial_cash: float = 10000.0):
             end_cpi = sim_df.iloc[-1]['cpi']
             real_total_ret = calculate_real_returns(total_ret, start_cpi, end_cpi)
             # CAGR adjustment for real returns
-            real_final_val = initial_cash * (1 + real_total_ret)
-            real_cagr = calculate_cagr(initial_cash, real_final_val, days)
+            real_final_val = total_invested * (1 + real_total_ret)
+            real_cagr = calculate_cagr(total_invested, real_final_val, days)
 
             # Store result
             res = SimulationResult(
