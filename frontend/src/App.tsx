@@ -136,6 +136,19 @@ const Dashboard = () => {
     );
   }
 
+  if (isError) {
+    return (
+      <div className="flex h-screen bg-slate-950 items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <p className="text-red-400 font-medium">Error loading simulation data. Please try syncing again.</p>
+          <button onClick={refetch} className="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg font-medium">
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen bg-slate-950 text-slate-200">
       <Sidebar />
