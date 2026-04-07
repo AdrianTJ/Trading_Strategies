@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { createChart, type IChartApi, ColorType, LineStyle, CrosshairMode, type ISeriesApi, type Time } from 'lightweight-charts';
+import { createChart, type IChartApi, ColorType, LineStyle, CrosshairMode, type Time } from 'lightweight-charts';
 import { type DailyPerformance } from '../hooks/useSimulationData';
 
 interface StrategyChartProps {
@@ -40,13 +40,13 @@ export const StrategyChart: React.FC<StrategyChartProps> = ({ data, benchmarkDat
     };
 
     // Equity Curve Chart
-    const equityChart = createChart(chartContainerRef.current, {
+    const equityChart: any = createChart(chartContainerRef.current, {
       ...commonOptions,
       height: 400,
     });
     chartRef.current = equityChart;
 
-    const areaSeries = equityChart.addSeries('Area', {
+    const areaSeries = equityChart.addAreaSeries({
       lineColor: '#3b82f6',
       topColor: 'rgba(59, 130, 246, 0.5)',
       bottomColor: 'rgba(59, 130, 246, 0.1)',
@@ -61,9 +61,9 @@ export const StrategyChart: React.FC<StrategyChartProps> = ({ data, benchmarkDat
     areaSeries.setData(equityData);
 
     // Benchmark Series
-    let benchmarkSeries: ISeriesApi<'Line'> | null = null;
+    let benchmarkSeries: any = null;
     if (benchmarkData && benchmarkData.length > 0) {
-      benchmarkSeries = equityChart.addSeries('Line', {
+      benchmarkSeries = equityChart.addLineSeries({
         color: '#f59e0b',
         lineWidth: 2,
         lineStyle: LineStyle.Dashed,
@@ -85,13 +85,13 @@ export const StrategyChart: React.FC<StrategyChartProps> = ({ data, benchmarkDat
     equityChart.timeScale().fitContent();
 
     // Drawdown Chart
-    const drawdownChart = createChart(drawdownContainerRef.current, {
+    const drawdownChart: any = createChart(drawdownContainerRef.current, {
       ...commonOptions,
       height: 150,
     });
     drawdownChartRef.current = drawdownChart;
 
-    const drawdownSeries = drawdownChart.addSeries('Area', {
+    const drawdownSeries = drawdownChart.addAreaSeries({
       lineColor: '#ef4444',
       topColor: 'rgba(239, 68, 68, 0.5)',
       bottomColor: 'rgba(239, 68, 68, 0.1)',
@@ -113,15 +113,15 @@ export const StrategyChart: React.FC<StrategyChartProps> = ({ data, benchmarkDat
     drawdownChart.timeScale().fitContent();
 
     // Synchronize crosshair and time scale
-    equityChart.timeScale().subscribeVisibleTimeRangeChange((range) => {
+    equityChart.timeScale().subscribeVisibleTimeRangeChange((range: any) => {
       if (range) drawdownChart.timeScale().setVisibleRange(range);
     });
-    drawdownChart.timeScale().subscribeVisibleTimeRangeChange((range) => {
+    drawdownChart.timeScale().subscribeVisibleTimeRangeChange((range: any) => {
       if (range) equityChart.timeScale().setVisibleRange(range);
     });
 
     // Crosshair sync
-    equityChart.subscribeCrosshairMove((param) => {
+    equityChart.subscribeCrosshairMove((param: any) => {
         if (!param.point || !param.time) {
             drawdownChart.clearCrosshairPosition();
             setHoverData(null);
@@ -138,7 +138,7 @@ export const StrategyChart: React.FC<StrategyChartProps> = ({ data, benchmarkDat
             });
         }
     });
-    drawdownChart.subscribeCrosshairMove((param) => {
+    drawdownChart.subscribeCrosshairMove((param: any) => {
         if (!param.point || !param.time) {
             equityChart.clearCrosshairPosition();
         } else {
