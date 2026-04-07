@@ -1,10 +1,10 @@
-import { BrowserRouter as Router, Routes, Route, Navigate, useParams, Link, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams, Link } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LayoutDashboard, TrendingUp, DollarSign, Waves, RefreshCw, BarChart3, CalendarDays } from 'lucide-react';
 import axios from 'axios';
 import { useState } from 'react';
 
-import { useSimulationData, useBenchmarks, DailyPerformance, SimulationResult } from './hooks/useSimulationData';
+import { useSimulationData, useBenchmarks, type DailyPerformance, type SimulationResult } from './hooks/useSimulationData';
 import { StrategyChart } from './components/StrategyChart';
 import { ReturnsMatrix } from './components/ReturnsMatrix';
 import { StatsGrid } from './components/StatsGrid';

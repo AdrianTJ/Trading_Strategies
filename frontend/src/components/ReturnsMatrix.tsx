@@ -1,5 +1,5 @@
 import React from 'react';
-import { DailyPerformance } from '../hooks/useSimulationData';
+import { type DailyPerformance } from '../hooks/useSimulationData';
 
 interface ReturnsMatrixProps {
   data: DailyPerformance[];
@@ -15,7 +15,6 @@ export const ReturnsMatrix: React.FC<ReturnsMatrixProps> = ({ data }) => {
   data.forEach((d) => {
     const date = new Date(d.date);
     const year = date.getFullYear();
-    const month = date.getMonth(); // 0-indexed
 
     if (!matrix[year]) {
       matrix[year] = {};

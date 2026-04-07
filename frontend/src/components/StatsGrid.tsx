@@ -1,6 +1,6 @@
 import React from 'react';
-import { SimulationResult } from '../hooks/useSimulationData';
-import { TrendingUp, Target, AlertTriangle, Clock, ShieldCheck, Info } from 'lucide-react';
+import { type SimulationResult } from '../hooks/useSimulationData';
+import { TrendingUp, Target, AlertTriangle, ShieldCheck, Info } from 'lucide-react';
 
 interface StatsGridProps {
   simulation: SimulationResult | null;

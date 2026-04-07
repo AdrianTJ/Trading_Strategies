@@ -1,5 +1,5 @@
 import React from 'react';
-import { SimulationResult } from '../hooks/useSimulationData';
+import { type SimulationResult } from '../hooks/useSimulationData';
 import { TrendingUp, Target, ShieldCheck, AlertTriangle, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 
 interface ComparisonTableProps {

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { createChart, IChartApi, ColorType, LineStyle, CrosshairMode, ISeriesApi } from 'lightweight-charts';
-import { DailyPerformance } from '../hooks/useSimulationData';
+import { createChart, type IChartApi, ColorType, LineStyle, CrosshairMode, type ISeriesApi, type Time } from 'lightweight-charts';
+import { type DailyPerformance } from '../hooks/useSimulationData';
 
 interface StrategyChartProps {
   data: DailyPerformance[];
@@ -12,6 +12,7 @@ export const StrategyChart: React.FC<StrategyChartProps> = ({ data, benchmarkDat
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const drawdownContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
+  const drawdownChartRef = useRef<IChartApi | null>(null);
   const [hoverData, setHoverData] = useState<{
     date: string;
     strategyValue: number | null;
@@ -45,7 +46,7 @@ export const StrategyChart: React.FC<StrategyChartProps> = ({ data, benchmarkDat
     });
     chartRef.current = equityChart;
 
-    const areaSeries = equityChart.addAreaSeries({
+    const areaSeries = equityChart.addSeries('Area', {
       lineColor: '#3b82f6',
       topColor: 'rgba(59, 130, 246, 0.5)',
       bottomColor: 'rgba(59, 130, 246, 0.1)',
@@ -53,16 +54,16 @@ export const StrategyChart: React.FC<StrategyChartProps> = ({ data, benchmarkDat
     });
 
     const equityData = data.map((d) => ({
-      time: d.date.split('T')[0],
+      time: d.date.split('T')[0] as Time,
       value: d.portfolio_value,
     }));
 
     areaSeries.setData(equityData);
 
     // Benchmark Series
-    let benchmarkSeries: any = null;
+    let benchmarkSeries: ISeriesApi<'Line'> | null = null;
     if (benchmarkData && benchmarkData.length > 0) {
-      benchmarkSeries = equityChart.addLineSeries({
+      benchmarkSeries = equityChart.addSeries('Line', {
         color: '#f59e0b',
         lineWidth: 2,
         lineStyle: LineStyle.Dashed,
@@ -74,7 +75,7 @@ export const StrategyChart: React.FC<StrategyChartProps> = ({ data, benchmarkDat
       const normalizationFactor = initialStrategyValue / initialBenchmarkValue;
 
       const benchmarkPoints = benchmarkData.map((d) => ({
-        time: d.date.split('T')[0],
+        time: d.date.split('T')[0] as Time,
         value: d.portfolio_value * normalizationFactor,
       }));
 
@@ -90,7 +91,7 @@ export const StrategyChart: React.FC<StrategyChartProps> = ({ data, benchmarkDat
     });
     drawdownChartRef.current = drawdownChart;
 
-    const drawdownSeries = drawdownChart.addAreaSeries({
+    const drawdownSeries = drawdownChart.addSeries('Area', {
       lineColor: '#ef4444',
       topColor: 'rgba(239, 68, 68, 0.5)',
       bottomColor: 'rgba(239, 68, 68, 0.1)',
@@ -103,7 +104,7 @@ export const StrategyChart: React.FC<StrategyChartProps> = ({ data, benchmarkDat
       if (d.portfolio_value > maxVal) maxVal = d.portfolio_value;
       const dd = (d.portfolio_value - maxVal) / maxVal;
       return {
-        time: d.date.split('T')[0],
+        time: d.date.split('T')[0] as Time,
         value: dd * 100, // as percentage
       };
     });
@@ -113,19 +114,19 @@ export const StrategyChart: React.FC<StrategyChartProps> = ({ data, benchmarkDat
 
     // Synchronize crosshair and time scale
     equityChart.timeScale().subscribeVisibleTimeRangeChange((range) => {
-      drawdownChart.timeScale().setVisibleTimeRange(range);
+      if (range) drawdownChart.timeScale().setVisibleRange(range);
     });
     drawdownChart.timeScale().subscribeVisibleTimeRangeChange((range) => {
-      equityChart.timeScale().setVisibleTimeRange(range);
+      if (range) equityChart.timeScale().setVisibleRange(range);
     });
 
     // Crosshair sync
     equityChart.subscribeCrosshairMove((param) => {
-        if (param.point === undefined || !param.time) {
+        if (!param.point || !param.time) {
             drawdownChart.clearCrosshairPosition();
             setHoverData(null);
         } else {
-            drawdownChart.setCrosshairPosition(param.point, param.time, drawdownSeries);
+            drawdownChart.setCrosshairPosition(param.point.x, param.time, drawdownSeries);
             
             const strategyValue = param.seriesData.get(areaSeries);
             const benchValue = benchmarkSeries ? param.seriesData.get(benchmarkSeries) : null;
@@ -138,10 +139,10 @@ export const StrategyChart: React.FC<StrategyChartProps> = ({ data, benchmarkDat
         }
     });
     drawdownChart.subscribeCrosshairMove((param) => {
-        if (param.point === undefined || !param.time) {
+        if (!param.point || !param.time) {
             equityChart.clearCrosshairPosition();
         } else {
-            equityChart.setCrosshairPosition(param.point, param.time, areaSeries);
+            equityChart.setCrosshairPosition(param.point.x, param.time, areaSeries);
         }
     });
 
