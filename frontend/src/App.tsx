@@ -1,15 +1,49 @@
+import { Component, type ReactNode, useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams, Link } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { LayoutDashboard, TrendingUp, DollarSign, Waves, RefreshCw, BarChart3, CalendarDays } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, DollarSign, Waves, RefreshCw, BarChart3, CalendarDays, AlertCircle } from 'lucide-react';
 import axios from 'axios';
-import { useState } from 'react';
 
 import { useSimulationData, useBenchmarks, type DailyPerformance, type SimulationResult } from './hooks/useSimulationData';
 import { StrategyChart } from './components/StrategyChart';
 import { ReturnsMatrix } from './components/ReturnsMatrix';
 import { StatsGrid } from './components/StatsGrid';
 import { ComparisonTable } from './components/ComparisonTable';
-import { useEffect } from 'react';
+
+class SimpleErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean, error: Error | null}> {
+  constructor(props: {children: ReactNode}) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: Error, errorInfo: any) {
+    console.error("ErrorBoundary caught an error", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="h-screen bg-slate-950 flex items-center justify-center p-8 text-center">
+          <div className="bg-red-500/10 border border-red-500/20 p-8 rounded-2xl max-w-md">
+            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-bold text-white mb-2">Something went wrong</h2>
+            <p className="text-slate-400 mb-6 font-mono text-sm break-words text-left bg-black/30 p-4 rounded border border-white/5">
+              {this.state.error?.toString()}
+            </p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="bg-red-600 hover:bg-red-500 text-white px-6 py-2 rounded-lg font-bold"
+            >
+              Reload Page
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const queryClient = new QueryClient();
 
@@ -113,9 +147,6 @@ const Dashboard = () => {
   const handleSync = async () => {
     setIsSyncing(true);
     try {
-      // In a real app, this would be a POST call to trigger sync & simulation
-      // For now, let's assume we trigger the run_simulations script via a backend endpoint
-      // Mocking the behavior
       await axios.post('http://localhost:8000/api/sync-and-run');
       await refetch();
     } catch (err) {
@@ -139,10 +170,14 @@ const Dashboard = () => {
   if (isError) {
     return (
       <div className="flex h-screen bg-slate-950 items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <p className="text-red-400 font-medium">Error loading simulation data. Please try syncing again.</p>
-          <button onClick={refetch} className="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg font-medium">
-            Retry
+        <div className="flex flex-col items-center gap-4 text-center max-w-md p-8">
+          <AlertCircle className="w-12 h-12 text-red-500 mb-2" />
+          <h2 className="text-xl font-bold text-white mb-2">Error loading simulation data</h2>
+          <p className="text-slate-400 mb-6">
+            We couldn't fetch the simulation results. Make sure the backend is running and you have synced the data.
+          </p>
+          <button onClick={() => refetch()} className="bg-red-600 hover:bg-red-500 text-white px-8 py-3 rounded-xl font-bold transition-transform active:scale-95">
+            Retry Connection
           </button>
         </div>
       </div>
@@ -150,9 +185,9 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="flex h-screen bg-slate-950 text-slate-200">
+    <div className="flex h-screen bg-slate-950 text-slate-200 w-full overflow-hidden">
       <Sidebar />
-      <main className="flex-1 overflow-auto p-8">
+      <main className="flex-1 overflow-auto p-8 w-full">
         <header className="mb-8 flex justify-between items-start">
           <div>
             <h2 className="text-3xl font-bold text-white capitalize flex items-center gap-2">
@@ -235,14 +270,16 @@ const Dashboard = () => {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <Router>
-        <Routes>
-          <Route path="/" element={<Navigate to="/dashboard/sp500/lump-sum" replace />} />
-          <Route path="/dashboard/:asset/:strategy" element={<Dashboard />} />
-        </Routes>
-      </Router>
-    </QueryClientProvider>
+    <SimpleErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <Router>
+          <Routes>
+            <Route path="/" element={<Navigate to="/dashboard/sp500/lump-sum" replace />} />
+            <Route path="/dashboard/:asset/:strategy" element={<Dashboard />} />
+          </Routes>
+        </Router>
+      </QueryClientProvider>
+    </SimpleErrorBoundary>
   );
 }
 

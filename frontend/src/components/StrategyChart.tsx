@@ -22,151 +22,182 @@ export const StrategyChart: React.FC<StrategyChartProps> = ({ data, benchmarkDat
   useEffect(() => {
     if (!chartContainerRef.current || !drawdownContainerRef.current || data.length === 0) return;
 
-    const commonOptions = {
-      layout: {
-        background: { type: ColorType.Solid, color: 'transparent' },
-        textColor: '#9ca3af',
-      },
-      grid: {
-        vertLines: { color: 'rgba(75, 85, 99, 0.2)' },
-        horzLines: { color: 'rgba(75, 85, 99, 0.2)' },
-      },
-      crosshair: {
-        mode: CrosshairMode.Normal,
-      },
-      timeScale: {
-        borderColor: 'rgba(75, 85, 99, 0.2)',
-      },
-    };
+    let equityChart: any = null;
+    let drawdownChart: any = null;
 
-    // Equity Curve Chart
-    const equityChart: any = createChart(chartContainerRef.current, {
-      ...commonOptions,
-      height: 400,
-    });
-    chartRef.current = equityChart;
+    try {
+        const commonOptions = {
+            layout: {
+                background: { type: ColorType.Solid, color: 'transparent' },
+                textColor: '#9ca3af',
+            },
+            grid: {
+                vertLines: { color: 'rgba(75, 85, 99, 0.2)' },
+                horzLines: { color: 'rgba(75, 85, 99, 0.2)' },
+            },
+            crosshair: {
+                mode: CrosshairMode.Normal,
+            },
+            timeScale: {
+                borderColor: 'rgba(75, 85, 99, 0.2)',
+            },
+        };
 
-    const areaSeries = equityChart.addAreaSeries({
-      lineColor: '#3b82f6',
-      topColor: 'rgba(59, 130, 246, 0.5)',
-      bottomColor: 'rgba(59, 130, 246, 0.1)',
-      lineWidth: 2,
-    });
+        // Equity Curve Chart
+        equityChart = createChart(chartContainerRef.current, {
+            ...commonOptions,
+            height: 400,
+        });
+        chartRef.current = equityChart;
 
-    const equityData = data.map((d) => ({
-      time: d.date.split('T')[0] as Time,
-      value: d.portfolio_value,
-    }));
-
-    areaSeries.setData(equityData);
-
-    // Benchmark Series
-    let benchmarkSeries: any = null;
-    if (benchmarkData && benchmarkData.length > 0) {
-      benchmarkSeries = equityChart.addLineSeries({
-        color: '#f59e0b',
-        lineWidth: 2,
-        lineStyle: LineStyle.Dashed,
-        title: benchmarkName || 'Benchmark',
-      });
-
-      const initialStrategyValue = data[0].portfolio_value;
-      const initialBenchmarkValue = benchmarkData[0].portfolio_value;
-      const normalizationFactor = initialStrategyValue / initialBenchmarkValue;
-
-      const benchmarkPoints = benchmarkData.map((d) => ({
-        time: d.date.split('T')[0] as Time,
-        value: d.portfolio_value * normalizationFactor,
-      }));
-
-      benchmarkSeries.setData(benchmarkPoints);
-    }
-
-    equityChart.timeScale().fitContent();
-
-    // Drawdown Chart
-    const drawdownChart: any = createChart(drawdownContainerRef.current, {
-      ...commonOptions,
-      height: 150,
-    });
-    drawdownChartRef.current = drawdownChart;
-
-    const drawdownSeries = drawdownChart.addAreaSeries({
-      lineColor: '#ef4444',
-      topColor: 'rgba(239, 68, 68, 0.5)',
-      bottomColor: 'rgba(239, 68, 68, 0.1)',
-      lineWidth: 2,
-    });
-
-    // Calculate drawdown
-    let maxVal = -Infinity;
-    const drawdownData = data.map((d) => {
-      if (d.portfolio_value > maxVal) maxVal = d.portfolio_value;
-      const dd = (d.portfolio_value - maxVal) / maxVal;
-      return {
-        time: d.date.split('T')[0] as Time,
-        value: dd * 100, // as percentage
-      };
-    });
-
-    drawdownSeries.setData(drawdownData);
-    drawdownChart.timeScale().fitContent();
-
-    // Synchronize crosshair and time scale
-    equityChart.timeScale().subscribeVisibleTimeRangeChange((range: any) => {
-      if (range) drawdownChart.timeScale().setVisibleRange(range);
-    });
-    drawdownChart.timeScale().subscribeVisibleTimeRangeChange((range: any) => {
-      if (range) equityChart.timeScale().setVisibleRange(range);
-    });
-
-    // Crosshair sync
-    equityChart.subscribeCrosshairMove((param: any) => {
-        if (!param.point || !param.time) {
-            drawdownChart.clearCrosshairPosition();
-            setHoverData(null);
-        } else {
-            drawdownChart.setCrosshairPosition(param.point.x, param.time, drawdownSeries);
-            
-            const strategyValue = param.seriesData.get(areaSeries);
-            const benchValue = benchmarkSeries ? param.seriesData.get(benchmarkSeries) : null;
-            
-            setHoverData({
-              date: param.time as string,
-              strategyValue: strategyValue ? (strategyValue as any).value : null,
-              benchmarkValue: benchValue ? (benchValue as any).value : null,
+        // Try addAreaSeries, fallback to addSeries if missing (v5)
+        const areaSeries = equityChart.addAreaSeries 
+            ? equityChart.addAreaSeries({
+                lineColor: '#3b82f6',
+                topColor: 'rgba(59, 130, 246, 0.5)',
+                bottomColor: 'rgba(59, 130, 246, 0.1)',
+                lineWidth: 2,
+            })
+            : equityChart.addSeries('Area', {
+                lineColor: '#3b82f6',
+                topColor: 'rgba(59, 130, 246, 0.5)',
+                bottomColor: 'rgba(59, 130, 246, 0.1)',
+                lineWidth: 2,
             });
+
+        const equityData = data.map((d) => ({
+            time: d.date.split('T')[0] as Time,
+            value: d.portfolio_value,
+        }));
+
+        areaSeries.setData(equityData);
+
+        // Benchmark Series
+        let benchmarkSeries: any = null;
+        if (benchmarkData && benchmarkData.length > 0) {
+            benchmarkSeries = equityChart.addLineSeries
+                ? equityChart.addLineSeries({
+                    color: '#f59e0b',
+                    lineWidth: 2,
+                    lineStyle: LineStyle.Dashed,
+                    title: benchmarkName || 'Benchmark',
+                })
+                : equityChart.addSeries('Line', {
+                    color: '#f59e0b',
+                    lineWidth: 2,
+                    lineStyle: LineStyle.Dashed,
+                    title: benchmarkName || 'Benchmark',
+                });
+
+            const initialStrategyValue = data[0].portfolio_value;
+            const initialBenchmarkValue = benchmarkData[0].portfolio_value;
+            const normalizationFactor = initialStrategyValue / initialBenchmarkValue;
+
+            const benchmarkPoints = benchmarkData.map((d) => ({
+                time: d.date.split('T')[0] as Time,
+                value: d.portfolio_value * normalizationFactor,
+            }));
+
+            benchmarkSeries.setData(benchmarkPoints);
         }
-    });
-    drawdownChart.subscribeCrosshairMove((param: any) => {
-        if (!param.point || !param.time) {
-            equityChart.clearCrosshairPosition();
-        } else {
-            equityChart.setCrosshairPosition(param.point.x, param.time, areaSeries);
-        }
-    });
 
-    const handleResize = () => {
-      if (chartContainerRef.current) {
-        equityChart.applyOptions({ width: chartContainerRef.current.clientWidth });
-      }
-      if (drawdownContainerRef.current) {
-        drawdownChart.applyOptions({ width: drawdownContainerRef.current.clientWidth });
-      }
-    };
+        equityChart.timeScale().fitContent();
 
-    window.addEventListener('resize', handleResize);
+        // Drawdown Chart
+        drawdownChart = createChart(drawdownContainerRef.current, {
+            ...commonOptions,
+            height: 150,
+        });
+        drawdownChartRef.current = drawdownChart;
 
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      equityChart.remove();
-      drawdownChart.remove();
-    };
+        const drawdownSeries = drawdownChart.addAreaSeries
+            ? drawdownChart.addAreaSeries({
+                lineColor: '#ef4444',
+                topColor: 'rgba(239, 68, 68, 0.5)',
+                bottomColor: 'rgba(239, 68, 68, 0.1)',
+                lineWidth: 2,
+            })
+            : drawdownChart.addSeries('Area', {
+                lineColor: '#ef4444',
+                topColor: 'rgba(239, 68, 68, 0.5)',
+                bottomColor: 'rgba(239, 68, 68, 0.1)',
+                lineWidth: 2,
+            });
+
+        // Calculate drawdown
+        let maxVal = -Infinity;
+        const drawdownData = data.map((d) => {
+            if (d.portfolio_value > maxVal) maxVal = d.portfolio_value;
+            const dd = (d.portfolio_value - maxVal) / maxVal;
+            return {
+                time: d.date.split('T')[0] as Time,
+                value: dd * 100, // as percentage
+            };
+        });
+
+        drawdownSeries.setData(drawdownData);
+        drawdownChart.timeScale().fitContent();
+
+        // Synchronize crosshair and time scale
+        equityChart.timeScale().subscribeVisibleTimeRangeChange((range: any) => {
+            if (range && drawdownChart) drawdownChart.timeScale().setVisibleRange(range);
+        });
+        drawdownChart.timeScale().subscribeVisibleTimeRangeChange((range: any) => {
+            if (range && equityChart) equityChart.timeScale().setVisibleRange(range);
+        });
+
+        // Crosshair sync
+        equityChart.subscribeCrosshairMove((param: any) => {
+            if (!drawdownChart) return;
+            if (!param.point || !param.time) {
+                drawdownChart.clearCrosshairPosition();
+                setHoverData(null);
+            } else {
+                drawdownChart.setCrosshairPosition(param.point.x, param.time, drawdownSeries);
+                
+                const strategyValue = param.seriesData.get(areaSeries);
+                const benchValue = benchmarkSeries ? param.seriesData.get(benchmarkSeries) : null;
+                
+                setHoverData({
+                    date: param.time as string,
+                    strategyValue: strategyValue ? (strategyValue as any).value : null,
+                    benchmarkValue: benchValue ? (benchValue as any).value : null,
+                });
+            }
+        });
+        drawdownChart.subscribeCrosshairMove((param: any) => {
+            if (!equityChart) return;
+            if (!param.point || !param.time) {
+                equityChart.clearCrosshairPosition();
+            } else {
+                equityChart.setCrosshairPosition(param.point.x, param.time, areaSeries);
+            }
+        });
+
+        const handleResize = () => {
+            if (equityChart && chartContainerRef.current) {
+                equityChart.applyOptions({ width: chartContainerRef.current.clientWidth });
+            }
+            if (drawdownChart && drawdownContainerRef.current) {
+                drawdownChart.applyOptions({ width: drawdownContainerRef.current.clientWidth });
+            }
+        };
+
+        window.addEventListener('resize', handleResize);
+
+        return () => {
+            window.removeEventListener('resize', handleResize);
+            if (equityChart) equityChart.remove();
+            if (drawdownChart) drawdownChart.remove();
+        };
+    } catch (err) {
+        console.error("Error initializing StrategyChart", err);
+    }
   }, [data, benchmarkData, benchmarkName]);
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800 relative">
+      <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800 relative min-h-[460px]">
         <div className="flex justify-between items-start mb-2">
           <h3 className="text-sm font-medium text-slate-400">Equity Curve (Indexed)</h3>
           {hoverData && (
@@ -205,11 +236,11 @@ export const StrategyChart: React.FC<StrategyChartProps> = ({ data, benchmarkDat
             </div>
           )}
         </div>
-        <div ref={chartContainerRef} className="w-full" />
+        <div ref={chartContainerRef} className="w-full h-[400px]" />
       </div>
-      <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800">
+      <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800 min-h-[210px]">
         <h3 className="text-sm font-medium text-slate-400 mb-2">Drawdown (%)</h3>
-        <div ref={drawdownContainerRef} className="w-full" />
+        <div ref={drawdownContainerRef} className="w-full h-[150px]" />
       </div>
     </div>
   );
