@@ -26,7 +26,7 @@ export const ComparisonTable: React.FC<ComparisonTableProps> = ({ strategy, benc
     {
       name: 'Real CAGR',
       strategyValue: strategy.real_cagr !== null ? (strategy.real_cagr * 100).toFixed(2) + '%' : 'N/A',
-      benchmarkValue: benchmark?.real_cagr !== null ? (benchmark!.real_cagr! * 100).toFixed(2) + '%' : 'N/A',
+      benchmarkValue: (benchmark && benchmark.real_cagr !== null) ? (benchmark.real_cagr! * 100).toFixed(2) + '%' : 'N/A',
       icon: <Target className="w-4 h-4 text-purple-400" />,
       higherIsBetter: true,
     },

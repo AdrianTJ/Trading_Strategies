@@ -59,7 +59,7 @@ export const StatsGrid: React.FC<StatsGridProps> = ({ simulation, benchmark }) =
     {
       label: 'Real CAGR',
       value: simulation.real_cagr !== null ? `${(simulation.real_cagr * 100).toFixed(2)}%` : 'N/A',
-      benchmarkValue: benchmark?.real_cagr !== null ? `${(benchmark!.real_cagr! * 100).toFixed(2)}%` : undefined,
+      benchmarkValue: (benchmark && benchmark.real_cagr !== null) ? `${(benchmark.real_cagr! * 100).toFixed(2)}%` : undefined,
       icon: <Target className="w-5 h-5 text-purple-400" />,
       color: 'text-purple-400',
       tooltip: 'Inflation-adjusted CAGR. Shows the real purchasing power growth.',

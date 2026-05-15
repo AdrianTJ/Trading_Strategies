@@ -9,7 +9,8 @@
     "test:backend": "PYTHONPATH=. pytest",
     "test:frontend": "npm run test --prefix frontend",
     "test": "npm run test:backend",
-    "sync": "python scripts/sync_data.py && python scripts/align_data.py && python scripts/run_simulations.py"
+    "sync": "python scripts/sync_data.py && python scripts/align_data.py && python scripts/run_simulations.py",
+    "clear-results": "python scripts/clear_results.py"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
