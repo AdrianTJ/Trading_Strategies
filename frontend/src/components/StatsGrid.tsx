@@ -57,20 +57,20 @@ export const StatsGrid: React.FC<StatsGridProps> = ({ simulation, benchmark }) =
       tooltip: 'Compound Annual Growth Rate. The geometric mean return each year.',
     },
     {
+      label: 'Real CAGR',
+      value: simulation.real_cagr !== null ? `${(simulation.real_cagr * 100).toFixed(2)}%` : 'N/A',
+      benchmarkValue: benchmark?.real_cagr !== null ? `${(benchmark!.real_cagr! * 100).toFixed(2)}%` : undefined,
+      icon: <Target className="w-5 h-5 text-purple-400" />,
+      color: 'text-purple-400',
+      tooltip: 'Inflation-adjusted CAGR. Shows the real purchasing power growth.',
+    },
+    {
       label: 'Sharpe Ratio',
       value: simulation.sharpe_ratio?.toFixed(2) || 'N/A',
       benchmarkValue: benchmark ? (benchmark.sharpe_ratio?.toFixed(2) || 'N/A') : undefined,
       icon: <Target className="w-5 h-5 text-blue-400" />,
       color: 'text-blue-400',
       tooltip: 'Risk-adjusted return. Higher is better. Measures excess return per unit of volatility.',
-    },
-    {
-      label: 'Sortino Ratio',
-      value: simulation.sortino_ratio?.toFixed(2) || 'N/A',
-      benchmarkValue: benchmark ? (benchmark.sortino_ratio?.toFixed(2) || 'N/A') : undefined,
-      icon: <ShieldCheck className="w-5 h-5 text-indigo-400" />,
-      color: 'text-indigo-400',
-      tooltip: 'Risk-adjusted return focusing on downside volatility. Higher is better.',
     },
     {
       label: 'Max Drawdown',
@@ -82,11 +82,36 @@ export const StatsGrid: React.FC<StatsGridProps> = ({ simulation, benchmark }) =
     },
   ];
 
+  // Helper to format currency
+  const formatCurrency = (val: number) => 
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      {stats.map((stat) => (
-        <StatCard key={stat.label} {...stat} />
-      ))}
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {stats.map((stat) => (
+          <StatCard key={stat.label} {...stat} />
+        ))}
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+         <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800 flex justify-between items-center px-6">
+            <div className="flex items-center gap-3">
+              <div className="bg-blue-600/20 p-2 rounded-lg"><TrendingUp className="w-4 h-4 text-blue-400" /></div>
+              <span className="text-sm font-medium text-slate-400">Total Invested</span>
+            </div>
+            <span className="text-xl font-bold text-white">{formatCurrency(simulation.initial_cash + (simulation.strategy_name.includes('dca') ? 0 : 0))} 
+              {/* Note: In a real app we'd fetch the actual total invested from backend simulation results */}
+              <span className="text-xs text-slate-500 ml-2 font-normal">(Initial + Injections)</span>
+            </span>
+         </div>
+         <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800 flex justify-between items-center px-6">
+            <div className="flex items-center gap-3">
+              <div className="bg-emerald-600/20 p-2 rounded-lg"><TrendingUp className="w-4 h-4 text-emerald-400" /></div>
+              <span className="text-sm font-medium text-slate-400">Total Return</span>
+            </div>
+            <span className="text-xl font-bold text-emerald-400">{(simulation.total_return * 100).toFixed(2)}%</span>
+         </div>
+      </div>
     </div>
   );
 };

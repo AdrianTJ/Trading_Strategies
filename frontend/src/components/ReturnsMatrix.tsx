@@ -27,21 +27,35 @@ export const ReturnsMatrix: React.FC<ReturnsMatrixProps> = ({ data }) => {
     // Let's just track the first and last portfolio value of each month.
   });
 
-  // Re-calculate monthly returns properly
-  const monthlyValues: Record<number, Record<number, { first: number; last: number }>> = {};
+  // Re-calculate monthly returns properly using daily returns
+  const monthlyReturns: Record<number, Record<number, number>> = {};
+  const yearsSet = new Set<number>();
+
   data.forEach((d) => {
     const date = new Date(d.date);
     const year = date.getFullYear();
     const month = date.getMonth();
+    yearsSet.add(year);
 
-    if (!monthlyValues[year]) monthlyValues[year] = {};
-    if (!monthlyValues[year][month]) {
-      monthlyValues[year][month] = { first: d.portfolio_value, last: d.portfolio_value };
+    if (!monthlyReturns[year]) monthlyReturns[year] = {};
+    if (monthlyReturns[year][month] === undefined) {
+      monthlyReturns[year][month] = 1.0;
     }
-    monthlyValues[year][month].last = d.portfolio_value;
+    
+    // Compound the daily return
+    monthlyReturns[year][month] *= (1 + d.daily_return);
   });
 
-  const sortedYears = [...years].sort((a, b) => b - a);
+  // Convert compounded values back to returns (subtract 1)
+  Object.keys(monthlyReturns).forEach(y => {
+    const year = parseInt(y);
+    Object.keys(monthlyReturns[year]).forEach(m => {
+        const month = parseInt(m);
+        monthlyReturns[year][month] -= 1;
+    });
+  });
+
+  const sortedYears = Array.from(yearsSet).sort((a, b) => b - a);
   const months = [
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
@@ -73,8 +87,8 @@ export const ReturnsMatrix: React.FC<ReturnsMatrixProps> = ({ data }) => {
         </div>
 
         {sortedYears.map((year) => {
-          let yearReturn = 1;
-          const yearData = monthlyValues[year];
+          let yearReturnCompounded = 1.0;
+          const yearData = monthlyReturns[year];
           
           return (
             <div key={year} className="grid grid-cols-[100px_repeat(12,1fr)_100px] gap-1 mb-1">
@@ -82,12 +96,11 @@ export const ReturnsMatrix: React.FC<ReturnsMatrixProps> = ({ data }) => {
                 {year}
               </div>
               {Array.from({ length: 12 }).map((_, monthIdx) => {
-                const monthData = yearData[monthIdx];
-                const returnValue = monthData 
-                  ? (monthData.last / monthData.first) - 1 
+                const returnValue = yearData[monthIdx] !== undefined 
+                  ? yearData[monthIdx] 
                   : null;
                 
-                if (returnValue !== null) yearReturn *= (1 + returnValue);
+                if (returnValue !== null) yearReturnCompounded *= (1 + returnValue);
 
                 return (
                   <div
@@ -103,7 +116,7 @@ export const ReturnsMatrix: React.FC<ReturnsMatrixProps> = ({ data }) => {
                 );
               })}
               <div className="bg-slate-800/50 p-2 rounded text-slate-100 font-bold text-sm flex items-center justify-center">
-                {((yearReturn - 1) * 100).toFixed(1)}%
+                {((yearReturnCompounded - 1) * 100).toFixed(1)}%
               </div>
             </div>
           );
