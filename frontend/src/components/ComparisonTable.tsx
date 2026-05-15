@@ -24,6 +24,13 @@ export const ComparisonTable: React.FC<ComparisonTableProps> = ({ strategy, benc
       higherIsBetter: true,
     },
     {
+      name: 'Real CAGR',
+      strategyValue: strategy.real_cagr !== null ? (strategy.real_cagr * 100).toFixed(2) + '%' : 'N/A',
+      benchmarkValue: benchmark?.real_cagr !== null ? (benchmark!.real_cagr! * 100).toFixed(2) + '%' : 'N/A',
+      icon: <Target className="w-4 h-4 text-purple-400" />,
+      higherIsBetter: true,
+    },
+    {
       name: 'Sharpe Ratio',
       strategyValue: strategy.sharpe_ratio?.toFixed(2) || 'N/A',
       benchmarkValue: benchmark ? (benchmark.sharpe_ratio?.toFixed(2) || 'N/A') : 'N/A',
