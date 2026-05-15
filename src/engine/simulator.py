@@ -66,11 +66,28 @@ class Simulator:
             portfolio_value.append(current_value)
             total_invested_list.append(total_invested)
             
+        daily_returns = [0.0]
+        for i in range(1, len(portfolio_value)):
+            prev_val = portfolio_value[i-1]
+            curr_val = portfolio_value[i]
+            
+            # If capital was added on this day (execute_buy == 1 and invest_amount provided)
+            # we need to subtract it from curr_val to get the organic return
+            capital_added = 0
+            if results.iloc[i]['execute_buy'] == 1 and invest_amount:
+                capital_added = invest_amount
+            
+            if prev_val > 0:
+                daily_ret = (curr_val - capital_added) / prev_val - 1
+            else:
+                daily_ret = 0.0
+            daily_returns.append(daily_ret)
+
         results['cash_balance'] = cash_balance
         results['asset_units'] = asset_units
         results['portfolio_value'] = portfolio_value
         results['total_invested'] = total_invested_list
-        results['daily_return'] = results['portfolio_value'].pct_change().fillna(0)
+        results['daily_return'] = daily_returns
         results['cumulative_return'] = (results['portfolio_value'] / results['total_invested']) - 1
         
         return results

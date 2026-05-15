@@ -37,6 +37,25 @@ ASSETS = ["sp500", "gold", "treasury_10y"]
 
 def save_simulation(session, sim_df, strat_name, asset_id, initial_cash, rf_rate, is_benchmark=False):
     """Helper to save simulation results and daily performance."""
+    # Delete existing simulation for this asset/strategy to avoid duplicates
+    existing_sims = session.exec(
+        select(SimulationResult).where(
+            SimulationResult.strategy_name == strat_name,
+            SimulationResult.asset_id == asset_id
+        )
+    ).all()
+    
+    for old_sim in existing_sims:
+        # Delete associated daily performance
+        old_perfs = session.exec(
+            select(DailyPerformance).where(DailyPerformance.simulation_id == old_sim.id)
+        ).all()
+        for p in old_perfs:
+            session.delete(p)
+        session.delete(old_sim)
+    
+    session.commit()
+
     # Calculate metrics
     total_ret = sim_df.iloc[-1]['cumulative_return']
     total_invested = sim_df.iloc[-1]['total_invested']
