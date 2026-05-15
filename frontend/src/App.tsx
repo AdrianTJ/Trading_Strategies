@@ -10,6 +10,8 @@ import { ReturnsMatrix } from './components/ReturnsMatrix';
 import { StatsGrid } from './components/StatsGrid';
 import { ComparisonTable } from './components/ComparisonTable';
 
+import { ASSETS, STRATEGIES } from './config';
+
 class SimpleErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean, error: Error | null}> {
   constructor(props: {children: ReactNode}) {
     super(props);
@@ -46,19 +48,6 @@ class SimpleErrorBoundary extends Component<{children: ReactNode}, {hasError: bo
 }
 
 const queryClient = new QueryClient();
-
-const ASSETS = [
-  { id: 'sp500', name: 'S&P 500', icon: <TrendingUp className="w-4 h-4" /> },
-  { id: 'gold', name: 'Gold', icon: <DollarSign className="w-4 h-4" /> },
-  { id: 'treasury_10y', name: 'US Bonds', icon: <Waves className="w-4 h-4" /> },
-];
-
-const STRATEGIES = [
-  { id: 'lump-sum', name: 'Lump Sum' },
-  { id: 'monthly-dca', name: 'Monthly DCA' },
-  { id: 'weekly-dca', name: 'Weekly DCA' },
-  { id: 'dip-buy', name: 'Dip Buy (-5%)' },
-];
 
 const Sidebar = () => {
   const { asset, strategy } = useParams();
