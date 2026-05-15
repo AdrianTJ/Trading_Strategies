@@ -63,27 +63,43 @@ export const ReturnsMatrix: React.FC<ReturnsMatrixProps> = ({ data }) => {
 
   const getBackgroundColor = (value: number) => {
     if (value > 0) {
-      const opacity = Math.min(value * 5, 0.8); // 10% return -> 0.5 opacity
-      return `rgba(34, 197, 94, ${opacity})`;
+      const opacity = Math.min(value * 10, 0.9); // More vibrant
+      return `rgba(16, 185, 129, ${opacity})`;
     } else if (value < 0) {
-      const opacity = Math.min(Math.abs(value) * 5, 0.8);
-      return `rgba(239, 68, 68, ${opacity})`;
+      const opacity = Math.min(Math.abs(value) * 10, 0.9);
+      return `rgba(244, 63, 94, ${opacity})`;
     }
-    return 'transparent';
+    return 'rgba(255, 255, 255, 0.03)';
   };
 
   return (
-    <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800 overflow-x-auto">
-      <h3 className="text-lg font-semibold text-slate-100 mb-6">Monthly Returns (%)</h3>
+    <div className="glass-card p-8 rounded-3xl overflow-x-auto animate-in fade-in slide-in-from-right duration-1000 delay-150">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h3 className="text-xl font-black text-white tracking-tight">Monthly Performance</h3>
+          <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Periodic Returns Heatmap (%)</p>
+        </div>
+        <div className="flex gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-sm bg-emerald-500/80" />
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Gains</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-sm bg-rose-500/80" />
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Losses</span>
+          </div>
+        </div>
+      </div>
+
       <div className="min-w-[800px]">
-        <div className="grid grid-cols-[100px_repeat(12,1fr)_100px] gap-1 mb-2">
-          <div className="text-slate-500 font-medium text-sm">Year</div>
+        <div className="grid grid-cols-[80px_repeat(12,1fr)_80px] gap-2 mb-4">
+          <div className="text-[10px] text-slate-600 font-black uppercase tracking-widest pl-2">Year</div>
           {months.map((m) => (
-            <div key={m} className="text-slate-500 font-medium text-sm text-center">
+            <div key={m} className="text-[10px] text-slate-600 font-black uppercase tracking-widest text-center">
               {m}
             </div>
           ))}
-          <div className="text-slate-500 font-medium text-sm text-center">Total</div>
+          <div className="text-[10px] text-slate-600 font-black uppercase tracking-widest text-center">Total</div>
         </div>
 
         {sortedYears.map((year) => {
@@ -91,8 +107,8 @@ export const ReturnsMatrix: React.FC<ReturnsMatrixProps> = ({ data }) => {
           const yearData = monthlyReturns[year];
           
           return (
-            <div key={year} className="grid grid-cols-[100px_repeat(12,1fr)_100px] gap-1 mb-1">
-              <div className="bg-slate-800/50 p-2 rounded text-slate-300 font-medium text-sm flex items-center justify-center">
+            <div key={year} className="grid grid-cols-[80px_repeat(12,1fr)_80px] gap-2 mb-2 group">
+              <div className="bg-white/5 p-2 rounded-lg text-slate-400 font-black text-xs flex items-center justify-center group-hover:bg-white/10 transition-colors border border-white/5">
                 {year}
               </div>
               {Array.from({ length: 12 }).map((_, monthIdx) => {
@@ -105,17 +121,18 @@ export const ReturnsMatrix: React.FC<ReturnsMatrixProps> = ({ data }) => {
                 return (
                   <div
                     key={monthIdx}
-                    className="p-2 rounded text-xs flex items-center justify-center font-medium"
+                    className="p-2.5 rounded-lg text-[11px] flex items-center justify-center font-black transition-all duration-300 hover:scale-110 hover:z-10 cursor-default shadow-sm hover:shadow-lg"
                     style={{
-                      backgroundColor: returnValue !== null ? getBackgroundColor(returnValue) : 'transparent',
-                      color: returnValue !== null ? '#fff' : 'transparent',
+                      backgroundColor: getBackgroundColor(returnValue || 0),
+                      color: returnValue !== null ? '#fff' : 'rgba(255,255,255,0.05)',
+                      border: returnValue !== null ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent'
                     }}
                   >
-                    {returnValue !== null ? (returnValue * 100).toFixed(1) : '-'}
+                    {returnValue !== null ? (returnValue * 100).toFixed(1) : ''}
                   </div>
                 );
               })}
-              <div className="bg-slate-800/50 p-2 rounded text-slate-100 font-bold text-sm flex items-center justify-center">
+              <div className="bg-white/5 p-2 rounded-lg text-white font-black text-xs flex items-center justify-center border border-white/10 group-hover:bg-blue-600/20 group-hover:border-blue-500/30 transition-all">
                 {((yearReturnCompounded - 1) * 100).toFixed(1)}%
               </div>
             </div>

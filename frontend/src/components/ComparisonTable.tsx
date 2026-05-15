@@ -71,29 +71,36 @@ export const ComparisonTable: React.FC<ComparisonTableProps> = ({ strategy, benc
   };
 
   return (
-    <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800 overflow-hidden">
-      <h3 className="text-lg font-semibold text-white mb-6">Performance Comparison</h3>
+    <div className="glass-card p-8 rounded-3xl overflow-hidden animate-in fade-in slide-in-from-left duration-1000 delay-150">
+      <div className="mb-8">
+        <h3 className="text-xl font-black text-white tracking-tight">Performance Comparison</h3>
+        <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Relative to benchmark (%)</p>
+      </div>
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-slate-800">
-              <th className="py-3 px-4 text-slate-500 font-medium text-sm">Metric</th>
-              <th className="py-3 px-4 text-slate-500 font-medium text-sm">Active Strategy</th>
-              <th className="py-3 px-4 text-slate-500 font-medium text-sm">Benchmark</th>
-              <th className="py-3 px-4 text-slate-500 font-medium text-sm">Difference</th>
+            <tr className="border-b border-white/5">
+              <th className="py-4 px-4 text-[10px] text-slate-600 font-black uppercase tracking-widest">Metric</th>
+              <th className="py-4 px-4 text-[10px] text-slate-600 font-black uppercase tracking-widest">Active</th>
+              <th className="py-4 px-4 text-[10px] text-slate-600 font-black uppercase tracking-widest">Benchmark</th>
+              <th className="py-4 px-4 text-[10px] text-slate-600 font-black uppercase tracking-widest">Delta</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/50">
+          <tbody className="divide-y divide-white/5">
             {metrics.map((m) => (
-              <tr key={m.name} className="hover:bg-white/5 transition-colors">
-                <td className="py-4 px-4 flex items-center gap-3">
-                  {m.icon}
-                  <span className="text-slate-300 font-medium">{m.name}</span>
+              <tr key={m.name} className="group hover:bg-white/[0.03] transition-colors">
+                <td className="py-5 px-4 flex items-center gap-4">
+                  <div className="bg-slate-950/50 p-2 rounded-lg border border-white/5 group-hover:scale-110 transition-transform">
+                    {m.icon}
+                  </div>
+                  <span className="text-slate-400 font-bold text-sm tracking-tight">{m.name}</span>
                 </td>
-                <td className="py-4 px-4 text-slate-100 font-bold">{m.strategyValue}</td>
-                <td className="py-4 px-4 text-slate-400">{m.benchmarkValue}</td>
-                <td className="py-4 px-4 font-medium">
-                  {compare(m.strategyValue, m.benchmarkValue, m.higherIsBetter)}
+                <td className="py-5 px-4 text-white font-black text-sm">{m.strategyValue}</td>
+                <td className="py-5 px-4 text-slate-500 font-bold text-sm">{m.benchmarkValue}</td>
+                <td className="py-5 px-4">
+                  <div className="flex items-center">
+                    {compare(m.strategyValue, m.benchmarkValue, m.higherIsBetter)}
+                  </div>
                 </td>
               </tr>
             ))}

@@ -17,28 +17,31 @@ interface StatCardProps {
 }
 
 const StatCard: React.FC<StatCardProps> = ({ label, value, benchmarkValue, icon, color, tooltip }) => (
-  <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800 flex flex-col gap-2 relative group">
-    <div className="flex items-center gap-4">
-      <div className="bg-slate-800 p-3 rounded-lg">{icon}</div>
-      <div>
-        <div className="flex items-center gap-1">
-          <p className="text-sm text-slate-400 font-medium">{label}</p>
+  <div className="glass-card p-6 rounded-2xl flex flex-col gap-4 relative group hover:bg-white/[0.08] hover:border-white/20 transition-all duration-500 hover:shadow-blue-500/5 hover:-translate-y-1 overflow-hidden">
+    <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-white/5 to-transparent rounded-full -mr-8 -mt-8 transition-transform duration-700 group-hover:scale-110" />
+    <div className="flex items-start justify-between relative z-10">
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-1.5">
+          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{label}</p>
           {tooltip && (
             <div className="relative group/tooltip">
-              <Info className="w-3.5 h-3.5 text-slate-500 cursor-help" />
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-800 text-xs text-slate-200 rounded lg hidden group-hover/tooltip:block z-50 shadow-xl border border-slate-700">
+              <Info className="w-3 h-3 text-slate-600 cursor-help transition-colors group-hover/tooltip:text-slate-400" />
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-48 p-3 bg-slate-900 text-[11px] leading-relaxed text-slate-300 rounded-xl hidden group-hover/tooltip:block z-50 shadow-2xl border border-white/10 backdrop-blur-xl">
                 {tooltip}
               </div>
             </div>
           )}
         </div>
-        <p className={`text-2xl font-bold ${color}`}>{value}</p>
+        <p className={`text-2xl font-black tracking-tight ${color}`}>{value}</p>
+      </div>
+      <div className={`bg-slate-950/50 p-2.5 rounded-xl border border-white/5 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3`}>
+        {icon}
       </div>
     </div>
     {benchmarkValue && (
-      <div className="mt-2 pt-2 border-t border-slate-800/50 flex justify-between items-center text-xs">
-        <span className="text-slate-500 font-medium uppercase tracking-wider">Benchmark</span>
-        <span className="text-slate-300 font-semibold">{benchmarkValue}</span>
+      <div className="pt-4 border-t border-white/5 flex justify-between items-center text-[10px] relative z-10">
+        <span className="text-slate-500 font-bold uppercase tracking-widest">Benchmark</span>
+        <span className="text-slate-300 font-bold px-2 py-0.5 bg-white/5 rounded-md border border-white/5">{benchmarkValue}</span>
       </div>
     )}
   </div>
@@ -49,11 +52,11 @@ export const StatsGrid: React.FC<StatsGridProps> = ({ simulation, benchmark }) =
 
   const stats = [
     {
-      label: 'CAGR',
+      label: 'Nominal CAGR',
       value: `${(simulation.cagr * 100).toFixed(2)}%`,
       benchmarkValue: benchmark ? `${(benchmark.cagr * 100).toFixed(2)}%` : undefined,
       icon: <TrendingUp className="w-5 h-5 text-emerald-400" />,
-      color: 'text-emerald-400',
+      color: 'text-emerald-400 text-glow-emerald',
       tooltip: 'Compound Annual Growth Rate. The geometric mean return each year.',
     },
     {
@@ -69,15 +72,15 @@ export const StatsGrid: React.FC<StatsGridProps> = ({ simulation, benchmark }) =
       value: simulation.sharpe_ratio?.toFixed(2) || 'N/A',
       benchmarkValue: benchmark ? (benchmark.sharpe_ratio?.toFixed(2) || 'N/A') : undefined,
       icon: <Target className="w-5 h-5 text-blue-400" />,
-      color: 'text-blue-400',
+      color: 'text-blue-400 text-glow-blue',
       tooltip: 'Risk-adjusted return. Higher is better. Measures excess return per unit of volatility.',
     },
     {
       label: 'Max Drawdown',
       value: `${(simulation.max_drawdown * 100).toFixed(2)}%`,
       benchmarkValue: benchmark ? `${(benchmark.max_drawdown * 100).toFixed(2)}%` : undefined,
-      icon: <AlertTriangle className="w-5 h-5 text-red-400" />,
-      color: 'text-red-400',
+      icon: <AlertTriangle className="w-5 h-5 text-rose-500" />,
+      color: 'text-rose-500',
       tooltip: 'The maximum peak-to-trough decline during the investment period.',
     },
   ];
@@ -87,29 +90,32 @@ export const StatsGrid: React.FC<StatsGridProps> = ({ simulation, benchmark }) =
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom duration-1000">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat) => (
           <StatCard key={stat.label} {...stat} />
         ))}
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-         <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800 flex justify-between items-center px-6">
-            <div className="flex items-center gap-3">
-              <div className="bg-blue-600/20 p-2 rounded-lg"><TrendingUp className="w-4 h-4 text-blue-400" /></div>
-              <span className="text-sm font-medium text-slate-400">Total Invested</span>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+         <div className="glass-card p-6 rounded-2xl flex justify-between items-center group transition-all duration-500 hover:bg-white/[0.08]">
+            <div className="flex items-center gap-4">
+              <div className="bg-blue-600/10 p-3 rounded-xl border border-blue-500/20"><TrendingUp className="w-5 h-5 text-blue-400" /></div>
+              <div className="flex flex-col">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Capital Base</span>
+                <span className="text-sm font-semibold text-slate-300">Initial + Injections</span>
+              </div>
             </div>
-            <span className="text-xl font-bold text-white">{formatCurrency(simulation.initial_cash + (simulation.strategy_name.includes('dca') ? 0 : 0))} 
-              {/* Note: In a real app we'd fetch the actual total invested from backend simulation results */}
-              <span className="text-xs text-slate-500 ml-2 font-normal">(Initial + Injections)</span>
-            </span>
+            <span className="text-3xl font-black text-white tracking-tight">{formatCurrency(simulation.initial_cash)}</span>
          </div>
-         <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800 flex justify-between items-center px-6">
-            <div className="flex items-center gap-3">
-              <div className="bg-emerald-600/20 p-2 rounded-lg"><TrendingUp className="w-4 h-4 text-emerald-400" /></div>
-              <span className="text-sm font-medium text-slate-400">Total Return</span>
+         <div className="glass-card p-6 rounded-2xl flex justify-between items-center group transition-all duration-500 hover:bg-white/[0.08]">
+            <div className="flex items-center gap-4">
+              <div className="bg-emerald-600/10 p-3 rounded-xl border border-emerald-500/20"><TrendingUp className="w-5 h-5 text-emerald-400" /></div>
+              <div className="flex flex-col">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Performance</span>
+                <span className="text-sm font-semibold text-slate-300">Total Return</span>
+              </div>
             </div>
-            <span className="text-xl font-bold text-emerald-400">{(simulation.total_return * 100).toFixed(2)}%</span>
+            <span className="text-3xl font-black text-emerald-400 text-glow-emerald tracking-tight">{(simulation.total_return * 100).toFixed(2)}%</span>
          </div>
       </div>
     </div>

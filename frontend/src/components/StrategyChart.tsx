@@ -196,25 +196,28 @@ export const StrategyChart: React.FC<StrategyChartProps> = ({ data, benchmarkDat
   }, [data, benchmarkData, benchmarkName]);
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800 relative min-h-[460px]">
-        <div className="flex justify-between items-start mb-2">
-          <h3 className="text-sm font-medium text-slate-400">Equity Curve (Indexed)</h3>
+    <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom duration-1000">
+      <div className="glass-card p-8 rounded-3xl relative min-h-[500px]">
+        <div className="flex justify-between items-start mb-8">
+          <div>
+            <h3 className="text-xl font-black text-white tracking-tight">Equity Curve</h3>
+            <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Growth of Portfolio Value ($)</p>
+          </div>
           {hoverData && (
-            <div className="text-right">
-              <div className="text-xs text-slate-500 font-mono mb-1">{hoverData.date}</div>
-              <div className="flex gap-4">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full bg-blue-500" />
-                  <span className="text-xs font-semibold text-white">
-                    Strategy: {hoverData.strategyValue?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            <div className="text-right glass-card px-4 py-2 rounded-xl bg-white/[0.03] border-white/5 animate-in fade-in zoom-in-95 duration-200">
+              <div className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1.5">{hoverData.date}</div>
+              <div className="flex gap-6">
+                <div className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
+                  <span className="text-sm font-black text-white">
+                    {hoverData.strategyValue?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                   </span>
                 </div>
                 {benchmarkName && (
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-amber-500" />
-                    <span className="text-xs font-semibold text-white">
-                      {benchmarkName}: {hoverData.benchmarkValue?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
+                    <span className="text-sm font-black text-white">
+                      {hoverData.benchmarkValue?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                     </span>
                   </div>
                 )}
@@ -222,15 +225,15 @@ export const StrategyChart: React.FC<StrategyChartProps> = ({ data, benchmarkDat
             </div>
           )}
           {!hoverData && (
-            <div className="flex gap-4">
-              <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-blue-500" />
-                <span className="text-xs font-medium text-slate-400">Strategy</span>
+            <div className="flex gap-6">
+              <div className="flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.3)]" />
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Active Strategy</span>
               </div>
               {benchmarkName && (
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full bg-amber-500" />
-                  <span className="text-xs font-medium text-slate-400">{benchmarkName}</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.3)]" />
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{benchmarkName}</span>
                 </div>
               )}
             </div>
@@ -238,8 +241,11 @@ export const StrategyChart: React.FC<StrategyChartProps> = ({ data, benchmarkDat
         </div>
         <div ref={chartContainerRef} className="w-full h-[400px]" />
       </div>
-      <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800 min-h-[210px]">
-        <h3 className="text-sm font-medium text-slate-400 mb-2">Drawdown (%)</h3>
+      <div className="glass-card p-8 rounded-3xl min-h-[250px]">
+        <div className="mb-6">
+          <h3 className="text-lg font-black text-white tracking-tight">Drawdown Evolution</h3>
+          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Percentage decline from peak (%)</p>
+        </div>
         <div ref={drawdownContainerRef} className="w-full h-[150px]" />
       </div>
     </div>
