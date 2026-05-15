@@ -53,28 +53,30 @@ const Sidebar = () => {
   const { asset, strategy } = useParams();
   
   return (
-    <div className="w-64 bg-slate-900 border-r border-slate-800 h-screen flex flex-col text-slate-300">
-      <div className="p-6 border-b border-slate-800">
-        <h1 className="text-xl font-bold text-white flex items-center gap-2">
-          <LayoutDashboard className="w-6 h-6 text-blue-500" />
-          StrategyTracker
+    <div className="w-72 glass-sidebar h-screen flex flex-col text-slate-300 z-20">
+      <div className="p-8">
+        <h1 className="text-2xl font-bold text-white flex items-center gap-3 tracking-tight">
+          <div className="bg-blue-600 p-2 rounded-xl shadow-lg shadow-blue-500/20">
+            <LayoutDashboard className="w-6 h-6 text-white" />
+          </div>
+          Strategy<span className="text-blue-500">Tracker</span>
         </h1>
       </div>
-      <nav className="flex-1 p-4 overflow-y-auto">
-        <div className="mb-8">
-          <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4 px-2">Assets</h2>
-          <ul className="space-y-1">
+      <nav className="flex-1 px-4 py-2 overflow-y-auto space-y-8">
+        <div>
+          <h2 className="text-xs font-bold text-slate-500 uppercase tracking-[0.2em] mb-4 px-4">Assets</h2>
+          <ul className="space-y-2">
             {ASSETS.map((a) => (
               <li key={a.id}>
                 <Link
                   to={`/dashboard/${a.id}/${strategy || 'lump-sum'}`}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
                     asset === a.id 
-                      ? 'bg-blue-600/10 text-blue-400' 
-                      : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20 translate-x-1' 
+                      : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
                   }`}
                 >
-                  {a.icon}
+                  <span className={`${asset === a.id ? 'text-white' : 'text-slate-500'}`}>{a.icon}</span>
                   {a.name}
                 </Link>
               </li>
@@ -82,20 +84,20 @@ const Sidebar = () => {
           </ul>
         </div>
 
-        <div className="mb-4">
-          <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4 px-2">Strategies</h2>
-          <ul className="space-y-1">
+        <div>
+          <h2 className="text-xs font-bold text-slate-500 uppercase tracking-[0.2em] mb-4 px-4">Strategies</h2>
+          <ul className="space-y-2">
             {STRATEGIES.map((s) => (
               <li key={s.id}>
                 <Link
                   to={`/dashboard/${asset || 'sp500'}/${s.id}`}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
                     strategy === s.id 
-                      ? 'bg-blue-600/10 text-blue-400' 
-                      : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                      ? 'bg-blue-600/10 text-blue-400 border border-blue-500/20 translate-x-1' 
+                      : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
                   }`}
                 >
-                  <BarChart3 className="w-4 h-4" />
+                  <BarChart3 className={`w-4 h-4 ${strategy === s.id ? 'text-blue-400' : 'text-slate-500'}`} />
                   {s.name}
                 </Link>
               </li>
@@ -103,8 +105,8 @@ const Sidebar = () => {
           </ul>
         </div>
       </nav>
-      <div className="p-4 border-t border-slate-800">
-        <div className="text-xs text-slate-500 text-center font-medium">v1.0.0 — Phase 4</div>
+      <div className="p-6 border-t border-white/5">
+        <div className="text-[10px] text-slate-600 text-center font-bold uppercase tracking-widest">v1.1.0 — High Fidelity</div>
       </div>
     </div>
   );
@@ -176,47 +178,56 @@ const Dashboard = () => {
   return (
     <div className="flex h-screen bg-slate-950 text-slate-200 w-full overflow-hidden">
       <Sidebar />
-      <main className="flex-1 overflow-auto p-8 w-full">
-        <header className="mb-8 flex justify-between items-start">
-          <div>
-            <h2 className="text-3xl font-bold text-white capitalize flex items-center gap-2">
-              {asset.replace('_', ' ')}
-              <span className="text-slate-600 font-light mx-1">/</span>
-              <span className="text-blue-400">{strategy.replace('-', ' ')}</span>
-            </h2>
-            <p className="text-slate-400 mt-1">
-              {simulation 
-                ? `Historical backtest from ${new Date(simulation.start_date).toLocaleDateString()} to ${new Date(simulation.end_date).toLocaleDateString()}`
-                : 'No simulation data found for this combination.'}
-            </p>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider ml-1">Benchmark Overlay</label>
-              <select 
-                value={selectedBenchmarkId || ''} 
-                onChange={(e) => setSelectedBenchmarkId(e.target.value ? Number(e.target.value) : null)}
-                className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[180px]"
-              >
-                <option value="">None</option>
-                {benchmarks.map(b => (
-                  <option key={b.id} value={b.id}>{b.strategy_name}</option>
-                ))}
-              </select>
+      <main className="flex-1 overflow-auto w-full relative">
+        <div className="p-8 lg:p-12 max-w-[1600px] mx-auto">
+          <header className="mb-12 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+            <div className="animate-in fade-in slide-in-from-left duration-700">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="px-2 py-0.5 bg-blue-500/10 text-blue-400 text-[10px] font-bold uppercase tracking-widest rounded border border-blue-500/20">Live Analysis</span>
+                {simulation && simulation.total_return > 0 && (
+                  <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-[10px] font-bold uppercase tracking-widest rounded border border-emerald-500/20">Outperforming Cash</span>
+                )}
+              </div>
+              <h2 className="text-4xl font-extrabold text-white tracking-tight flex items-center gap-3">
+                <span className="capitalize">{asset.replace('_', ' ')}</span>
+                <span className="text-slate-700 font-light">/</span>
+                <span className="text-blue-500">{strategy.replace('-', ' ')}</span>
+              </h2>
+              <p className="text-slate-500 mt-2 font-medium flex items-center gap-2">
+                <CalendarDays className="w-4 h-4" />
+                {simulation 
+                  ? `${new Date(simulation.start_date).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })} — ${new Date(simulation.end_date).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}`
+                  : 'No simulation data found'}
+              </p>
             </div>
-            <button 
-              onClick={handleSync}
-              disabled={isSyncing}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 text-white px-4 py-2 rounded-lg font-medium transition-colors mt-5"
-            >
-              <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-              {isSyncing ? 'Syncing...' : 'Sync Data'}
-            </button>
-          </div>
-        </header>
-        
-        {!simulation ? (
-          <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-16 flex flex-col items-center justify-center text-center">
+            
+            <div className="flex items-center gap-4 animate-in fade-in slide-in-from-right duration-700">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Benchmark Overlay</label>
+                <select 
+                  value={selectedBenchmarkId || ''} 
+                  onChange={(e) => setSelectedBenchmarkId(e.target.value ? Number(e.target.value) : null)}
+                  className="bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/50 min-w-[200px] backdrop-blur-md transition-all hover:bg-white/10 cursor-pointer"
+                >
+                  <option value="" className="bg-slate-900">None</option>
+                  {benchmarks.map(b => (
+                    <option key={b.id} value={b.id} className="bg-slate-900">{b.strategy_name}</option>
+                  ))}
+                </select>
+              </div>
+              <button 
+                onClick={handleSync}
+                disabled={isSyncing}
+                className="group relative flex items-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 shadow-lg shadow-blue-600/25 hover:shadow-blue-600/40 hover:-translate-y-0.5 active:translate-y-0 mt-5"
+              >
+                <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
+                {isSyncing ? 'Syncing...' : 'Sync Data'}
+              </button>
+            </div>
+          </header>
+          
+          {!simulation ? (
+            <div className="glass-card rounded-3xl p-20 flex flex-col items-center justify-center text-center animate-in zoom-in-95 duration-700">
             <div className="bg-slate-800 p-6 rounded-full mb-6">
               <CalendarDays className="w-12 h-12 text-slate-500" />
             </div>
