@@ -44,6 +44,23 @@ def test_monthly_dca_simulation(sample_data):
     # 4 months total in 100 days
     assert signals.sum() >= 3
 
+def test_simulation_starting_from_zero_cash(sample_data):
+    # Starting with 0 cash: first portfolio value is 0, so the first daily
+    # return must be guarded to 0.0 instead of dividing by zero.
+    signals = generate_lump_sum_signals(sample_data)
+    simulator = Simulator(initial_cash=0, commission=0, slippage=0)
+    results = simulator.run(sample_data, signals, invest_amount=1000.0)
+
+    # Day 0: no executed buy yet, no cash -> portfolio value 0
+    assert results.iloc[0]['portfolio_value'] == 0.0
+    # Day 1: buy executes; previous value was 0 -> return guarded to 0.0
+    assert results.iloc[1]['execute_buy'] == 1
+    assert results.iloc[1]['daily_return'] == 0.0
+    # Later days have positive prior value and compute real returns
+    assert results.iloc[-1]['daily_return'] > 0.0
+    assert results.iloc[-1]['portfolio_value'] > 1000.0
+
+
 def test_weekly_dca_signals(sample_data):
     signals = generate_weekly_dca_signals(sample_data)
     # 100 daily days = ~15 calendar weeks, one signal per week

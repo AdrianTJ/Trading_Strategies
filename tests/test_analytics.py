@@ -17,6 +17,16 @@ def test_calculate_cagr():
     # Negative growth
     assert pytest.approx(calculate_cagr(200, 100, 365.25)) == -0.5
 
+def test_calculate_cagr_guard_returns_zero():
+    # Non-positive start/end values or non-positive days -> 0, no crash
+    assert calculate_cagr(0, 100, 365.25) == 0.0
+    assert calculate_cagr(-50, 100, 365.25) == 0.0
+    assert calculate_cagr(100, 0, 365.25) == 0.0
+    assert calculate_cagr(100, -50, 365.25) == 0.0
+    assert calculate_cagr(100, 200, 0) == 0.0
+    assert calculate_cagr(100, 200, -10) == 0.0
+
+
 def test_calculate_max_drawdown():
     # Simple drawdown
     portfolio = pd.Series([100, 110, 105, 120, 110, 100, 130])
@@ -47,6 +57,14 @@ def test_calculate_sharpe_ratio():
     
     expected_sharpe = (returns.mean() / returns.std()) * np.sqrt(252)
     assert pytest.approx(calculate_sharpe_ratio(returns, 0.0)) == expected_sharpe
+
+def test_calculate_sharpe_ratio_zero_std_returns_zero():
+    # Constant returns -> std == 0 -> guard returns 0.0 instead of dividing by 0
+    constant_returns = pd.Series([0.001] * 252)
+    assert calculate_sharpe_ratio(constant_returns, 0.0) == 0.0
+    # Risk-free rate shifts the series but it stays constant -> still guarded
+    assert calculate_sharpe_ratio(constant_returns, 0.05) == 0.0
+
 
 def test_calculate_sortino_ratio():
     # Only positive returns -> Sortino should be high/inf (limited by code to avoid div by zero)
