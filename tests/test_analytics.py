@@ -5,7 +5,8 @@ from src.engine.analytics import (
     calculate_cagr,
     calculate_max_drawdown,
     calculate_sharpe_ratio,
-    calculate_sortino_ratio
+    calculate_sortino_ratio,
+    calculate_real_returns
 )
 
 def test_calculate_cagr():
@@ -67,3 +68,26 @@ def test_calculate_sortino_ratio():
     expected_sortino = (excess_mean / downside_deviation) * np.sqrt(252)
     
     assert pytest.approx(calculate_sortino_ratio(returns, 0.0)) == expected_sortino
+
+
+def test_calculate_real_returns_zero_or_negative_cpi_returns_nominal():
+    # Guard: non-positive CPI in either slot leaves nominal return untouched
+    assert calculate_real_returns(0.21, 0.0, 110.0) == 0.21
+    assert calculate_real_returns(0.21, 100.0, 0.0) == 0.21
+    assert calculate_real_returns(0.21, -5.0, 110.0) == 0.21
+    assert calculate_real_returns(0.21, 100.0, -1.0) == 0.21
+
+
+def test_calculate_real_returns_adjusts_for_inflation():
+    # 21% nominal cumulative with 10% CPI inflation -> ~10% real
+    # (1 + real) = (1 + 0.21) / (110 / 100) = 1.21 / 1.1
+    assert pytest.approx(calculate_real_returns(0.21, 100.0, 110.0)) == (1.21 / 1.1) - 1
+    # No inflation -> real == nominal
+    assert pytest.approx(calculate_real_returns(0.21, 100.0, 100.0)) == 0.21
+
+
+def test_calculate_real_returns_deflation_boosts_real_return():
+    # Falling CPI (deflation) makes real return exceed nominal
+    assert pytest.approx(calculate_real_returns(0.21, 100.0, 90.0)) == (1.21 / 0.9) - 1
+    # Loss case: -10% nominal under deflation is less negative in real terms
+    assert pytest.approx(calculate_real_returns(-0.10, 100.0, 90.0)) == (0.9 / 0.9) - 1

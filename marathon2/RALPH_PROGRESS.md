@@ -1,0 +1,1 @@
+- [x] Iter 1: covered calculate_real_returns (guard + inflation + deflation paths) in tests/test_analytics.py; analytics.py 81%->94%, total 96%->98%
