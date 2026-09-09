@@ -1,0 +1,1 @@
+- iter 1: tests/test_strategies.py — generate_weekly_dca_signals + empty-df edge tests; strategies.py 71%->100%; total 87%->92%
