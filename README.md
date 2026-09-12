@@ -1,6 +1,6 @@
-# StrategyTracker
+# Strategy Tracker
 
-A comprehensive tool for casual investors to backtest and compare investment strategies across multiple asset classes (S&P 500, Gold, US Bonds).
+A comprehensive tool (& UI) for casual investors to backtest and compare investment strategies across multiple asset classes (S&P 500, Gold, US Bonds).
 
 ## Features
 
