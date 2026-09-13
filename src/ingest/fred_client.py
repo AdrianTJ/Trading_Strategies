@@ -1,6 +1,6 @@
 import os
 from datetime import datetime, timedelta
-from typing import List, Dict, Any
+from typing import Dict, Any
 from fredapi import Fred
 from dotenv import load_dotenv
 import pandas as pd

@@ -33,6 +33,11 @@ def test_calculate_max_drawdown():
     # Peak at 120, low at 100. Drawdown = (100 - 120) / 120 = -0.1666...
     assert pytest.approx(calculate_max_drawdown(portfolio)) == -20/120
 
+def test_calculate_max_drawdown_guards_empty_and_zero():
+    # No meaningful drawdown -> 0.0 instead of a silent NaN
+    assert calculate_max_drawdown(pd.Series(dtype=float)) == 0.0
+    assert calculate_max_drawdown(pd.Series([0.0, 0.0, 0.0])) == 0.0
+
 def test_calculate_sharpe_ratio():
     # Constant 0.1% daily return, 0 risk free
     returns = pd.Series([0.001] * 252)
