@@ -6,5 +6,5 @@ __pycache__/
 .pytest_cache/
 trading_strategies.db
 .DS_Store
-frontend/node_modules/
+node_modules/
 frontend/dist/
