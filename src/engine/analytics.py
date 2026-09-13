@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-from typing import Dict, Any
 
 def calculate_cagr(start_value: float, end_value: float, days: int) -> float:
     """Calculate Compound Annual Growth Rate."""
@@ -11,14 +10,19 @@ def calculate_cagr(start_value: float, end_value: float, days: int) -> float:
 
 def calculate_max_drawdown(portfolio_values: pd.Series) -> float:
     """Calculate the maximum drawdown percentage."""
+    if portfolio_values.empty or (portfolio_values == 0).all():
+        return 0.0
     rolling_max = portfolio_values.cummax()
     drawdowns = (portfolio_values - rolling_max) / rolling_max
     return drawdowns.min()
 
+def _annual_to_daily_rate(annual_rate: float) -> float:
+    """Convert an annual rate to an equivalent daily rate (252 trading days)."""
+    return (1 + annual_rate) ** (1 / 252) - 1
+
 def calculate_sharpe_ratio(daily_returns: pd.Series, risk_free_rate: float = 0.0) -> float:
     """Calculate the annualized Sharpe Ratio."""
-    # Convert annual risk-free rate to daily
-    daily_rf = (1 + risk_free_rate) ** (1/252) - 1
+    daily_rf = _annual_to_daily_rate(risk_free_rate)
     excess_returns = daily_returns - daily_rf
     std = excess_returns.std()
     if std < 1e-9:
@@ -27,7 +31,7 @@ def calculate_sharpe_ratio(daily_returns: pd.Series, risk_free_rate: float = 0.0
 
 def calculate_sortino_ratio(daily_returns: pd.Series, risk_free_rate: float = 0.0) -> float:
     """Calculate the annualized Sortino Ratio using Downside Deviation."""
-    daily_rf = (1 + risk_free_rate) ** (1/252) - 1
+    daily_rf = _annual_to_daily_rate(risk_free_rate)
     excess_returns = daily_returns - daily_rf
     # Downside Deviation (RMS of negative excess returns)
     downside_diffs = np.minimum(0, excess_returns)

@@ -2,9 +2,6 @@ import pandas as pd
 from typing import Dict
 
 class AlignmentEngine:
-    def __init__(self):
-        pass
-
     def upsample_series(self, series: pd.Series, freq: str = 'D') -> pd.Series:
         """Upsample a series to the target frequency and forward-fill gaps."""
         return series.resample(freq).ffill()

@@ -61,6 +61,17 @@ def test_simulation_starting_from_zero_cash(sample_data):
     assert results.iloc[-1]['portfolio_value'] > 1000.0
 
 
+def test_zero_invest_amount_invests_nothing(sample_data):
+    # invest_amount=0.0 means "add 0 and invest 0", not the lump-sum all-in branch.
+    signals = generate_lump_sum_signals(sample_data)
+    simulator = Simulator(initial_cash=10000.0, commission=0, slippage=0)
+    results = simulator.run(sample_data, signals, invest_amount=0.0)
+
+    assert results['execute_buy'].iloc[1] == 1  # the buy day still fires
+    assert results['asset_units'].sum() == 0.0  # but nothing is bought
+    assert results['cash_balance'].iloc[-1] == 10000.0
+
+
 def test_weekly_dca_signals(sample_data):
     signals = generate_weekly_dca_signals(sample_data)
     # 100 daily days = ~15 calendar weeks, one signal per week
