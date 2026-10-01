@@ -1,0 +1,258 @@
+import { useMemo } from 'react';
+import type { Market } from '../engine/market';
+import type { Plan, Simulation } from '../engine/simulate';
+import { holdings, TIMING_LABEL, type Scenario } from '../state/scenarios';
+import { formatMonth, money, moneyCompact, moneyWhole, pct, signedMoney } from './format';
+import { LineChart, type ChartSeries } from './LineChart';
+
+export interface ScenarioResult {
+  scenario: Scenario;
+  label: string;
+  color: string;
+  sim: Simulation;
+}
+
+interface Props {
+  market: Market;
+  plan: Plan;
+  results: readonly ScenarioResult[];
+}
+
+export function Results({ market, plan, results }: Props) {
+  const first = results[0]!.sim;
+  const dates = useMemo(() => market.dates.slice(first.startIndex, first.endIndex + 1), [market, first.startIndex, first.endIndex]);
+  const startDate = dates[0]!;
+  const endDate = dates.at(-1)!;
+  const years = first.summary.years;
+  const annualOk = years >= 1;
+
+  const series: ChartSeries[] = useMemo(
+    () => results.map((r) => ({ key: r.scenario.id, label: r.label, color: r.color, values: r.sim.value })),
+    [results],
+  );
+  // One "money put in" line only makes sense when every strategy puts money in on the same days.
+  const sameSchedule = results.every((r) => r.scenario.timing === results[0]!.scenario.timing);
+  const reference = useMemo(() => (sameSchedule ? { label: 'Money put in', values: first.contributed } : undefined), [sameSchedule, first]);
+
+  const sorted = [...results].sort((a, b) => b.sim.summary.finalValue - a.sim.summary.finalValue);
+  const best = sorted[0]!;
+  const worst = sorted.at(-1)!;
+  const total = first.summary.totalContributed;
+
+  return (
+    <section className="results" aria-labelledby="results-title">
+      <h2 id="results-title" className="visually-hidden">
+        Results
+      </h2>
+      <p className="headline">
+        From {formatMonth(startDate)} to {formatMonth(endDate)}, {moneyWhole(total)} put in
+        {results.length > 1 ? (
+          <>
+            {' '}
+            ended up worth between <strong>{moneyWhole(worst.sim.summary.finalValue)}</strong> and{' '}
+            <strong>{moneyWhole(best.sim.summary.finalValue)}</strong>.
+          </>
+        ) : (
+          <>
+            {' '}
+            grew to <strong>{moneyWhole(best.sim.summary.finalValue)}</strong>.
+          </>
+        )}
+      </p>
+
+      <div className="tiles">
+        {results.map((r) => {
+          const s = r.sim.summary;
+          return (
+            <div className="tile" key={r.scenario.id}>
+              <div className="tile-label">
+                <span className="line-key" style={{ background: r.color }} />
+                {r.label}
+              </div>
+              <div className="tile-value">{moneyWhole(s.finalValue)}</div>
+              <div className={`tile-delta ${s.gain >= 0 ? 'up' : 'down'}`}>
+                {signedMoney(s.gain)} ({pct(s.gainPct, { signed: true, digits: 0 })})
+              </div>
+              {annualOk && <div className="tile-sub">{pct(s.moneyWeightedReturn)} a year</div>}
+            </div>
+          );
+        })}
+      </div>
+
+      <figure className="card">
+        <figcaption className="card-title">What it was worth along the way</figcaption>
+        <LineChart
+          dates={dates}
+          series={series}
+          reference={reference}
+          formatValue={moneyWhole}
+          formatAxis={moneyCompact}
+          ariaLabel={`Portfolio value from ${formatMonth(startDate)} to ${formatMonth(endDate)}. Exact figures are in the table below.`}
+        />
+      </figure>
+
+      <Takeaways results={results} />
+
+      <div className="card table-card">
+        <table className="compare">
+          <thead>
+            <tr>
+              <th scope="col" />
+              {results.map((r) => (
+                <th scope="col" key={r.scenario.id}>
+                  <span className="line-key" style={{ background: r.color }} />
+                  {r.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <Row label="Ended with" help={`On ${formatMonth(endDate)}`} results={results} cell={(r) => moneyWhole(r.sim.summary.finalValue)} />
+            <Row label="Put in" results={results} cell={(r) => moneyWhole(r.sim.summary.totalContributed)} />
+            <Row label="How it went in" results={results} cell={(r) => contributionText(r)} />
+            <Row
+              label="Average dollar invested for"
+              help="Money that goes in earlier has longer to grow (or fall)"
+              results={results}
+              cell={(r) => yearsText(r.sim.summary.averageYearsInvested)}
+            />
+            <Row label="Gain" results={results} cell={(r) => `${signedMoney(r.sim.summary.gain)} (${pct(r.sim.summary.gainPct, { signed: true })})`} />
+            <Row
+              label="Annual return"
+              help="Yearly rate earned on each dollar from the day it went in"
+              results={results}
+              cell={(r) => (annualOk ? pct(r.sim.summary.moneyWeightedReturn) : '—')}
+            />
+            <Row
+              label="After inflation"
+              help="The same, after subtracting inflation (CPI)"
+              results={results}
+              cell={(r) => (annualOk ? pct(r.sim.summary.realMoneyWeightedReturn) : '—')}
+            />
+            <Row
+              label="Worst fall from a high"
+              help="Biggest peak-to-bottom drop of the investments themselves"
+              results={results}
+              cell={(r) => {
+                const dd = r.sim.summary.maxDrawdown;
+                if (dd.depth > -0.0005) return 'None';
+                return `${pct(dd.depth)} (${formatMonth(market.dates[r.sim.startIndex + dd.troughIndex]!)})`;
+              }}
+            />
+            <Row
+              label="Furthest below money put in"
+              help="The worst moment to look at your balance"
+              results={results}
+              cell={(r) => {
+                const w = r.sim.summary.worstShortfall;
+                if (w.amount > -0.5) return 'Never';
+                return `${signedMoney(w.amount)} (${formatMonth(market.dates[r.sim.startIndex + w.index]!)})`;
+              }}
+            />
+          </tbody>
+        </table>
+      </div>
+      {!annualOk && <p className="note">Annual rates are hidden for windows shorter than a year, where they exaggerate.</p>}
+      {plan.initial > 0 && <p className="note">Includes a {moneyWhole(plan.initial)} starting balance invested on day one by every strategy.</p>}
+    </section>
+  );
+}
+
+function yearsText(years: number) {
+  if (years < 1) return `${Math.round(years * 12)} months`;
+  return `${years.toFixed(1)} years`;
+}
+
+function weeksText(weeks: number) {
+  if (weeks >= 104) return `${(weeks / 52).toFixed(1)} years`;
+  const w = Math.round(weeks);
+  return w === 1 ? 'a week' : `${w} weeks`;
+}
+
+function contributionText(r: ScenarioResult) {
+  const { perContribution, contributionCount } = r.sim;
+  if (r.scenario.timing === 'lump') return 'All on day one';
+  return `${money(perContribution)} ${TIMING_LABEL[r.scenario.timing].toLowerCase()} (${contributionCount}×)`;
+}
+
+function Row({ label, help, results, cell }: { label: string; help?: string; results: readonly ScenarioResult[]; cell: (r: ScenarioResult) => string }) {
+  return (
+    <tr>
+      <th scope="row">
+        {label}
+        {help && <span className="row-help">{help}</span>}
+      </th>
+      {results.map((r) => (
+        <td key={r.scenario.id}>{cell(r)}</td>
+      ))}
+    </tr>
+  );
+}
+
+/**
+ * Plain-language observations that are true of *this* run. Each one is derived from
+ * the numbers on screen; nothing here is general advice.
+ */
+function Takeaways({ results }: { results: readonly ScenarioResult[] }) {
+  const notes: string[] = [];
+  const key = (r: ScenarioResult) => JSON.stringify([holdings(r.scenario.allocation), holdings(r.scenario.allocation).length > 1 ? r.scenario.rebalance : '']);
+
+  // Same holdings, different timing (including all-at-once): explain the gap honestly.
+  // The dominant driver is almost always *when* the money went in on average, so say that
+  // rather than implying one schedule is cleverer.
+  const groups = new Map<string, ScenarioResult[]>();
+  for (const r of results) groups.set(key(r), [...(groups.get(key(r)) ?? []), r]);
+  for (const g of groups.values()) {
+    if (g.length < 2) continue;
+    const byValue = [...g].sort((a, b) => b.sim.summary.finalValue - a.sim.summary.finalValue);
+    const top = byValue[0]!;
+    const bottom = byValue.at(-1)!;
+    const name = (r: ScenarioResult) => TIMING_LABEL[r.scenario.timing].toLowerCase();
+    const gap = top.sim.summary.finalValue / bottom.sim.summary.finalValue - 1;
+    const earlierWeeks = ((top.sim.summary.averageYearsInvested - bottom.sim.summary.averageYearsInvested) * 365.25) / 7;
+    if (gap < 0.01) {
+      notes.push(
+        `Investing ${g.map(name).join(' vs ')} changed the ending balance by only ${pct(gap)}. How often you buy barely matters; what you buy and how long you stay in does.`,
+      );
+    } else if (earlierWeeks >= 1) {
+      notes.push(
+        `Investing ${name(top)} ended ${pct(gap)} ahead of investing ${name(bottom)}. The main reason: its average dollar went in ${weeksText(earlierWeeks)} earlier, so it spent longer in a market that mostly rose. That’s why investing sooner usually wins.`,
+      );
+    } else if (earlierWeeks <= -1) {
+      notes.push(
+        `Investing ${name(top)} ended ${pct(gap)} ahead of investing ${name(bottom)} even though its average dollar went in ${weeksText(-earlierWeeks)} later: prices dipped while the earlier money was going in. That’s the luck of these dates; try the start-date view below.`,
+      );
+    } else {
+      notes.push(`Investing ${name(top)} ended ${pct(gap)} ahead of investing ${name(bottom)}, from the luck of which days each one bought on.`);
+    }
+    // Investing everything at once also means the full amount rides every drop.
+    const lump = g.find((r) => r.scenario.timing === 'lump');
+    const spread = g.find((r) => r.scenario.timing !== 'lump');
+    if (lump && spread) {
+      const lumpLow = lump.sim.summary.worstShortfall.amount;
+      const spreadLow = spread.sim.summary.worstShortfall.amount;
+      if (lumpLow < spreadLow - 1) {
+        notes.push(
+          `The cost of investing all at once: at its worst it sat ${moneyWhole(-lumpLow)} below what was put in, versus ${moneyWhole(-spreadLow)} when spread out ${name(spread)}.`,
+        );
+      }
+    }
+  }
+
+  // Inflation: flag anything that lost purchasing power.
+  const lost = results.filter((r) => r.sim.summary.years >= 1 && r.sim.summary.realMoneyWeightedReturn < 0);
+  for (const r of lost) {
+    notes.push(
+      `${r.label} grew ${pct(r.sim.summary.moneyWeightedReturn)} a year on paper but ${pct(r.sim.summary.realMoneyWeightedReturn)} a year after inflation: it bought less at the end than the money put in would have.`,
+    );
+  }
+
+  if (notes.length === 0) return null;
+  return (
+    <ul className="takeaways">
+      {notes.map((n) => (
+        <li key={n}>{n}</li>
+      ))}
+    </ul>
+  );
+}
