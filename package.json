@@ -1,18 +1,27 @@
 {
-  "name": "strategy-tracker",
-  "version": "1.0.0",
+  "name": "hindsight",
   "private": true,
+  "version": "0.1.0",
+  "type": "module",
   "scripts": {
-    "start:backend": "uvicorn src.api.main:app --reload",
-    "start:frontend": "npm run dev --prefix frontend",
-    "dev": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
-    "test:backend": "PYTHONPATH=. pytest",
-    "test:frontend": "npm run test --prefix frontend",
-    "test": "npm run test:backend",
-    "sync": "python scripts/sync_data.py && python scripts/align_data.py && python scripts/run_simulations.py",
-    "clear-results": "python scripts/clear_results.py"
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "data": "node scripts/fetch-data.mjs"
+  },
+  "dependencies": {
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "@types/node": "^22.20.4",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.2",
+    "vitest": "^5.0.3"
   }
 }

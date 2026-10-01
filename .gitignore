@@ -1,10 +1,5 @@
-.gemini/
-.env
-.venv/
-__pycache__/
-*.pyc
-.pytest_cache/
-trading_strategies.db
-.DS_Store
 node_modules/
-frontend/dist/
+dist/
+.DS_Store
+*.log
+.env

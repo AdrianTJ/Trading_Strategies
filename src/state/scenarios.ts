@@ -1,0 +1,183 @@
+import { ASSET_BY_ID, ASSETS, type AssetId } from '../engine/assets';
+import type { Frequency, ISODate } from '../engine/dates';
+import type { Allocation, Plan, Rebalance, Strategy, Timing } from '../engine/simulate';
+
+export interface Scenario extends Strategy {
+  /** Stable key for React and for color assignment. */
+  id: string;
+}
+
+export interface AppState {
+  plan: Plan;
+  scenarios: Scenario[];
+}
+
+export const MAX_SCENARIOS = 4;
+
+export const FREQUENCIES: readonly Frequency[] = ['weekly', 'biweekly', 'monthly', 'quarterly', 'annually'];
+export const TIMINGS: readonly Timing[] = ['lump', ...FREQUENCIES];
+export const REBALANCES: readonly Rebalance[] = ['never', 'quarterly', 'annually'];
+
+/** "every ___" in the plan sentence. */
+export const FREQUENCY_NOUN: Record<Frequency, string> = {
+  weekly: 'week',
+  biweekly: 'two weeks',
+  monthly: 'month',
+  quarterly: 'quarter',
+  annually: 'year',
+};
+
+export const TIMING_LABEL: Record<Timing, string> = {
+  lump: 'All at once',
+  weekly: 'Every week',
+  biweekly: 'Every two weeks',
+  monthly: 'Every month',
+  quarterly: 'Every quarter',
+  annually: 'Once a year',
+};
+
+export const REBALANCE_LABEL: Record<Rebalance, string> = {
+  never: 'Never rebalance',
+  quarterly: 'Rebalance quarterly',
+  annually: 'Rebalance yearly',
+};
+
+let counter = 0;
+export const newId = () => `s${Date.now().toString(36)}${(counter++).toString(36)}`;
+
+const make = (allocation: Allocation, timing: Timing, rebalance: Rebalance = 'annually'): Scenario => ({
+  id: newId(),
+  allocation,
+  timing,
+  rebalance,
+});
+
+export interface Preset {
+  id: string;
+  label: string;
+  /** The question this comparison answers. */
+  question: string;
+  build: (plan: Plan) => Scenario[];
+}
+
+export const PRESETS: readonly Preset[] = [
+  {
+    id: 'mix',
+    label: 'Stocks, bonds, or a mix?',
+    question: 'Same money, same schedule. Only what you buy changes.',
+    build: (p) => [
+      make({ us_stocks: 100 }, p.frequency),
+      make({ us_bonds: 100 }, p.frequency),
+      make({ us_stocks: 80, us_bonds: 20 }, p.frequency),
+    ],
+  },
+  {
+    id: 'cadence',
+    label: 'Weekly or monthly?',
+    question: 'Same money, same S&P 500 fund. Only how often you buy changes.',
+    build: () => [make({ us_stocks: 100 }, 'weekly'), make({ us_stocks: 100 }, 'monthly'), make({ us_stocks: 100 }, 'quarterly')],
+  },
+  {
+    id: 'lump',
+    label: 'All at once or over time?',
+    question: 'The whole budget on day one versus spreading it out.',
+    build: (p) => [make({ us_stocks: 100 }, 'lump'), make({ us_stocks: 100 }, p.frequency)],
+  },
+  {
+    id: 'gold',
+    label: 'Does adding gold help?',
+    question: 'A classic stock/bond mix with and without a slice of gold.',
+    build: (p) => [make({ us_stocks: 60, us_bonds: 40 }, p.frequency), make({ us_stocks: 50, us_bonds: 35, gold: 15 }, p.frequency)],
+  },
+];
+
+export const allocationTotal = (a: Allocation) => Object.values(a).reduce((s, w) => s + (w ?? 0), 0);
+
+export const isValidAllocation = (a: Allocation) => Math.abs(allocationTotal(a) - 100) < 1e-6;
+
+/** Assets held, in display order, with their weights. */
+export function holdings(a: Allocation): [AssetId, number][] {
+  return ASSETS.filter((x) => (a[x.id] ?? 0) > 0).map((x) => [x.id, a[x.id]!]);
+}
+
+export function describeAllocation(a: Allocation): string {
+  const h = holdings(a);
+  if (h.length === 1) return `${ASSET_BY_ID[h[0]![0]].name}`;
+  return h.map(([id, w]) => `${w}% ${ASSET_BY_ID[id].name}`).join(' · ');
+}
+
+/**
+ * Names for a set of scenarios that show what actually differs between them:
+ * if they all hold the same thing, name them by timing; if they all buy on the same
+ * schedule, name them by holdings; otherwise both. Rebalancing only appears when it's
+ * the distinguishing choice.
+ */
+export function labelScenarios(scenarios: readonly Scenario[]): string[] {
+  const allocKey = (s: Scenario) => JSON.stringify(holdings(s.allocation));
+  const differs = <T,>(f: (s: Scenario) => T) => new Set(scenarios.map(f)).size > 1;
+  const byAlloc = differs(allocKey);
+  const byTiming = differs((s) => s.timing);
+  // Rebalancing only means something for mixes, so only compare it among them.
+  const mixes = scenarios.filter((s) => holdings(s.allocation).length > 1);
+  const byRebalance = new Set(mixes.map((s) => s.rebalance)).size > 1;
+  return scenarios.map((s) => {
+    const parts: string[] = [];
+    if (byAlloc || (!byTiming && !byRebalance)) parts.push(describeAllocation(s.allocation));
+    if (byTiming) parts.push(TIMING_LABEL[s.timing].toLowerCase());
+    if (byRebalance && holdings(s.allocation).length > 1) parts.push(REBALANCE_LABEL[s.rebalance].toLowerCase());
+    const label = parts.join(', ');
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  });
+}
+
+// --- URL state ---------------------------------------------------------------
+// The whole comparison lives in the URL hash, so any result can be bookmarked or shared.
+// Format (compact, human-readable):
+//   #from=2020-01-01&to=2026-09-30&amt=100&every=weekly&init=0&s=us_stocks:80,us_bonds:20~weekly~annually&s=...
+
+const ASSET_IDS = new Set<string>(ASSETS.map((a) => a.id));
+const isDate = (d: string | null): d is ISODate => !!d && /^\d{4}-\d{2}-\d{2}$/.test(d) && !Number.isNaN(Date.parse(d));
+
+export function encodeState({ plan, scenarios }: AppState): string {
+  const q = new URLSearchParams();
+  q.set('from', plan.start);
+  q.set('to', plan.end);
+  q.set('amt', String(plan.amount));
+  q.set('every', plan.frequency);
+  if (plan.initial) q.set('init', String(plan.initial));
+  for (const s of scenarios) {
+    const alloc = holdings(s.allocation)
+      .map(([id, w]) => `${id}:${w}`)
+      .join(',');
+    q.append('s', `${alloc}~${s.timing}~${s.rebalance}`);
+  }
+  // Commas and colons are safe in a hash; keep them readable.
+  return q.toString().replace(/%2C/g, ',').replace(/%3A/g, ':').replace(/%7E/gi, '~');
+}
+
+/** Parse a hash; anything malformed returns null and the caller falls back to defaults. */
+export function decodeState(hash: string): AppState | null {
+  const q = new URLSearchParams(hash.replace(/^#/, ''));
+  const start = q.get('from');
+  const end = q.get('to');
+  const amount = Number(q.get('amt'));
+  const frequency = q.get('every') as Frequency;
+  const initial = Number(q.get('init') ?? 0);
+  if (!isDate(start) || !isDate(end) || !(amount >= 0) || !(initial >= 0) || !FREQUENCIES.includes(frequency)) return null;
+
+  const scenarios: Scenario[] = [];
+  for (const raw of q.getAll('s').slice(0, MAX_SCENARIOS)) {
+    const [allocPart, timing, rebalance] = raw.split('~');
+    if (!allocPart || !TIMINGS.includes(timing as Timing) || !REBALANCES.includes(rebalance as Rebalance)) return null;
+    const allocation: Allocation = {};
+    for (const pair of allocPart.split(',')) {
+      const [id, w] = pair.split(':');
+      const weight = Number(w);
+      if (!id || !ASSET_IDS.has(id) || !(weight > 0 && weight <= 100)) return null;
+      allocation[id as AssetId] = weight;
+    }
+    scenarios.push({ id: newId(), allocation, timing: timing as Timing, rebalance: rebalance as Rebalance });
+  }
+  if (scenarios.length === 0) return null;
+  return { plan: { start, end, amount, frequency, initial }, scenarios };
+}
