@@ -115,9 +115,16 @@ describe('simulate: buy the dip', () => {
     expect(sim.summary.finalCash).toBeGreaterThan(0);
   });
 
+  it('reports how long the average dollar waited', () => {
+    expect(simulate(rising, earned, stocks('lump')).summary.averageYearsWaiting).toBeCloseTo(0, 10);
+    const waited = simulate(vShape, plan, dip(10)).summary.averageYearsWaiting;
+    expect(waited).toBeGreaterThan(0.1);
+  });
+
   it('never buys if the drop never comes', () => {
     const sim = simulate(rising, earned, dip(10));
     expect(sim.buyCount).toBe(0);
+    expect(sim.summary.averageYearsWaiting).toBeCloseTo(sim.summary.years / 2, 1);
     expect(sim.summary.finalCash).toBeCloseTo(sim.summary.totalContributed, 6);
     expect(sim.summary.averageYearsInvested).toBe(0);
   });

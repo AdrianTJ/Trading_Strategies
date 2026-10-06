@@ -37,7 +37,8 @@ function useRolling(dataUrl: string, plan: Plan, results: readonly ScenarioResul
     return () => w.terminate();
   }, []);
 
-  const strategies = results.map((r) => ({ allocation: r.scenario.allocation, timing: r.scenario.timing, rebalance: r.scenario.rebalance }));
+  // Strip the UI-only id; everything else is the strategy.
+  const strategies = results.map(({ scenario: { id: _id, ...strategy } }) => strategy);
   const key = JSON.stringify([plan.amount, plan.frequency, plan.funding, plan.initial, strategies, horizonYears]);
 
   useEffect(() => {

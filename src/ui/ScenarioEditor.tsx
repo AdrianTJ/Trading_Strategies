@@ -1,6 +1,7 @@
 import { ASSET_BY_ID, ASSETS, type AssetId } from '../engine/assets';
 import type { Allocation } from '../engine/simulate';
-import { allocationTotal, holdings, REBALANCE_LABEL, REBALANCES, TIMING_LABEL, TIMINGS, type Scenario } from '../state/scenarios';
+import { DEFAULT_DIP_PCT } from '../engine/simulate';
+import { allocationTotal, DIP_OPTIONS, holdings, REBALANCE_LABEL, REBALANCES, TIMING_LABEL, TIMINGS, type Scenario } from '../state/scenarios';
 import { NumberField, Select } from './fields';
 import { pct } from './format';
 
@@ -89,7 +90,20 @@ export function ScenarioEditor({ scenario, label, color, canRemove, onChange, on
 
       <div className="scenario-section">
         <span className="scenario-label">When to buy</span>
-        <Select label="When to buy" value={scenario.timing} options={TIMINGS.map((t) => ({ value: t, label: TIMING_LABEL[t] }))} onChange={(timing) => onChange({ ...scenario, timing })} />
+        <Select
+          label="When to buy"
+          value={scenario.timing}
+          options={TIMINGS.map((t) => ({ value: t, label: TIMING_LABEL[t] }))}
+          onChange={(timing) => onChange({ ...scenario, timing, ...(timing === 'dip' ? { dipPct: scenario.dipPct ?? DEFAULT_DIP_PCT } : {}) })}
+        />
+        {scenario.timing === 'dip' && (
+          <Select
+            label="How far below its high"
+            value={String(scenario.dipPct ?? DEFAULT_DIP_PCT)}
+            options={DIP_OPTIONS.map((p) => ({ value: String(p), label: `${p}% or more below its high` }))}
+            onChange={(v) => onChange({ ...scenario, dipPct: Number(v) })}
+          />
+        )}
       </div>
 
       {rows.length > 1 && (

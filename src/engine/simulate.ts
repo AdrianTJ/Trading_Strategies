@@ -90,6 +90,8 @@ export interface Summary {
   contributedInEndDollars: number;
   /** Amount-weighted average time each dollar spent in the market (not waiting in cash), in years. */
   averageYearsInvested: number;
+  /** Amount-weighted average time each dollar waited in cash before being invested (or until the end), in years. */
+  averageYearsWaiting: number;
   /** Cash still waiting to be invested at the end. */
   finalCash: number;
   /** Worst fall of the portfolio from a high (time-weighted, so new money can't hide it). */
@@ -304,6 +306,7 @@ function summarize(
   const when: number[] = [];
   let contributedInEndDollars = 0;
   let dollarDays = 0;
+  let arrivalDollarDays = 0;
   let bought = 0;
   for (let i = 0; i < n; i++) {
     if (buys[i]! > 0) {
@@ -312,6 +315,7 @@ function summarize(
     }
     const f = flows[i]!;
     if (f <= 0) continue;
+    arrivalDollarDays += f * (days[endIndex]! - days[startIndex + i]!);
     const inEndDollars = (f * cpiEnd) / cpiByDay[startIndex + i]!;
     nominal.push(-f);
     real.push(-inEndDollars);
@@ -339,6 +343,8 @@ function summarize(
     contributedInEndDollars,
     // Over all money that arrived; a dollar that never left cash counts as zero time invested.
     averageYearsInvested: bought > 0 ? dollarDays / totalContributed / 365.25 : 0,
+    // Time since arrival minus time in the market = time spent waiting.
+    averageYearsWaiting: (arrivalDollarDays - dollarDays) / totalContributed / 365.25,
     finalCash: cash[n - 1]!,
     maxDrawdown: maxDrawdown(growthIndex),
     worstShortfall,

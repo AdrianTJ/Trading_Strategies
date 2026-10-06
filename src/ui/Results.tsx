@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { Market } from '../engine/market';
 import type { Plan, Simulation } from '../engine/simulate';
-import { holdings, TIMING_LABEL, type Scenario } from '../state/scenarios';
+import { describeAllocation, describeTiming, holdings, type Scenario } from '../state/scenarios';
 import { formatMonth, moneyCompact, moneyWhole, pct, signedMoney } from './format';
 import { LineChart, type ChartSeries } from './LineChart';
 
@@ -167,19 +167,20 @@ export function Results({ market, plan, results }: Props) {
 }
 
 function yearsText(years: number) {
+  if (years * 52 < 8) return weeksText(years * 52);
   if (years < 1) return `${Math.round(years * 12)} months`;
   return `${years.toFixed(1)} years`;
 }
 
 function weeksText(weeks: number) {
-  if (weeks >= 104) return `${(weeks / 52).toFixed(1)} years`;
+  if (weeks >= 52) return `${(weeks / 52).toFixed(1)} years`;
   const w = Math.round(weeks);
   return w === 1 ? 'a week' : `${w} weeks`;
 }
 
 function contributionText(r: ScenarioResult) {
   const { buyCount } = r.sim;
-  const when = r.scenario.timing === 'lump' ? 'As soon as it arrived' : TIMING_LABEL[r.scenario.timing];
+  const when = r.scenario.timing === 'lump' ? 'As soon as it arrived' : describeTiming(r.scenario);
   return `${when} (${buyCount} ${buyCount === 1 ? 'buy' : 'buys'})`;
 }
 
@@ -215,7 +216,7 @@ function Takeaways({ results }: { results: readonly ScenarioResult[] }) {
     const byValue = [...g].sort((a, b) => b.sim.summary.finalValue - a.sim.summary.finalValue);
     const top = byValue[0]!;
     const bottom = byValue.at(-1)!;
-    const name = (r: ScenarioResult) => TIMING_LABEL[r.scenario.timing].toLowerCase();
+    const name = (r: ScenarioResult) => describeTiming(r.scenario).toLowerCase();
     const gap = top.sim.summary.finalValue / bottom.sim.summary.finalValue - 1;
     const earlierWeeks = ((top.sim.summary.averageYearsInvested - bottom.sim.summary.averageYearsInvested) * 365.25) / 7;
     if (gap < 0.01) {
@@ -245,6 +246,21 @@ function Takeaways({ results }: { results: readonly ScenarioResult[] }) {
         );
       }
     }
+  }
+
+  // Buy-the-dip: say how often the trigger fired and what waiting cost in time.
+  for (const r of results) {
+    if (r.scenario.timing !== 'dip') continue;
+    const s = r.sim.summary;
+    const days = r.sim.value.length;
+    const pctDays = r.sim.dipDays / days;
+    const what = holdings(r.scenario.allocation).length === 1 ? `the ${describeAllocation(r.scenario.allocation)}` : 'the mix';
+    let note =
+      pctDays === 0
+        ? `${describeTiming(r.scenario)}: the drop never came in this window, so nothing was ever invested.`
+        : `${describeTiming(r.scenario)}: ${what} was that far below its high on ${pct(pctDays, { digits: 0 })} of trading days, so the average dollar waited ${yearsText(s.averageYearsWaiting)} in T-bills before going in.`;
+    if (s.finalCash >= 0.5 && pctDays > 0) note += ` ${moneyWhole(s.finalCash)} was still waiting for the next drop at the end.`;
+    notes.push(note);
   }
 
   // Inflation: flag anything that lost purchasing power.
