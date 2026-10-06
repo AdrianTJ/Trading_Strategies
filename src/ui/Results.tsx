@@ -114,7 +114,7 @@ export function Results({ market, plan, results }: Props) {
         />
       </figure>
 
-      <Takeaways results={results} />
+      <Takeaways results={results} plan={plan} />
 
       <div className="card table-card">
         <table className="compare">
@@ -237,7 +237,7 @@ function Row({ label, help, results, cell }: { label: string; help?: string; res
  * Plain-language observations that are true of *this* run. Each one is derived from
  * the numbers on screen; nothing here is general advice.
  */
-function Takeaways({ results }: { results: readonly ScenarioResult[] }) {
+function Takeaways({ results, plan }: { results: readonly ScenarioResult[]; plan: Plan }) {
   const notes: string[] = [];
   const key = (r: ScenarioResult) => JSON.stringify([holdings(r.scenario.allocation), holdings(r.scenario.allocation).length > 1 ? r.scenario.rebalance : '']);
 
@@ -246,7 +246,10 @@ function Takeaways({ results }: { results: readonly ScenarioResult[] }) {
   // rather than implying one schedule is cleverer.
   const groups = new Map<string, ScenarioResult[]>();
   for (const r of results) groups.set(key(r), [...(groups.get(key(r)) ?? []), r]);
-  for (const g of groups.values()) {
+  for (const group of groups.values()) {
+    // Identical strategies say nothing about timing; compare distinct timings only.
+    const seen = new Set<string>();
+    const g = group.filter((r) => !seen.has(describeTiming(r.scenario)) && seen.add(describeTiming(r.scenario)));
     if (g.length < 2) continue;
     const byValue = [...g].sort((a, b) => b.sim.summary.finalValue - a.sim.summary.finalValue);
     const top = byValue[0]!;
@@ -256,7 +259,10 @@ function Takeaways({ results }: { results: readonly ScenarioResult[] }) {
     const earlierWeeks = ((top.sim.summary.averageYearsInvested - bottom.sim.summary.averageYearsInvested) * 365.25) / 7;
     if (gap < 0.01) {
       notes.push(
-        `Investing ${g.map(name).join(' vs ')} changed the ending balance by only ${pct(gap)}. How often you buy barely matters; what you buy and how long you stay in does.`,
+        `Investing ${g.map(name).join(' vs ')} changed the ending balance by only ${pct(gap)}. ` +
+          (g.every((r) => r.scenario.timing !== 'lump' && r.scenario.timing !== 'dip')
+            ? 'How often you buy barely matters; what you buy and how long you stay in does.'
+            : 'When you bought barely mattered here; what you buy and how long you stay in does.'),
       );
     } else if (earlierWeeks >= 1) {
       notes.push(
@@ -270,9 +276,12 @@ function Takeaways({ results }: { results: readonly ScenarioResult[] }) {
       notes.push(`Investing ${name(top)} ended ${pct(gap)} ahead of investing ${name(bottom)}, from the luck of which days each one bought on.`);
     }
     // Investing everything at once also means the full amount rides every drop.
+    // With a windfall, investing right away means the whole amount rides every drop;
+    // spreading it out on a schedule limits that. (For paychecks, "right away" is just
+    // buying on payday, so there's no trade-off to point out.)
     const lump = g.find((r) => r.scenario.timing === 'lump');
-    const spread = g.find((r) => r.scenario.timing !== 'lump');
-    if (lump && spread) {
+    const spread = g.find((r) => r.scenario.timing !== 'lump' && r.scenario.timing !== 'dip');
+    if (plan.funding === 'upfront' && lump && spread) {
       const lumpLow = lump.sim.summary.worstShortfall.amount;
       const spreadLow = spread.sim.summary.worstShortfall.amount;
       if (lumpLow < spreadLow - 1) {
@@ -290,10 +299,11 @@ function Takeaways({ results }: { results: readonly ScenarioResult[] }) {
     const days = r.sim.value.length;
     const pctDays = r.sim.dipDays / days;
     const what = holdings(r.scenario.allocation).length === 1 ? `the ${describeAllocation(r.scenario.allocation)}` : 'the mix';
+    const howOften = pctDays >= 0.01 ? `${pct(pctDays, { digits: 0 })} of trading days` : `only ${r.sim.dipDays} trading ${r.sim.dipDays === 1 ? 'day' : 'days'}`;
     let note =
-      pctDays === 0
+      r.sim.dipDays === 0
         ? `${describeTiming(r.scenario)}: the drop never came in this window, so nothing was ever invested.`
-        : `${describeTiming(r.scenario)}: ${what} was that far below its high on ${pct(pctDays, { digits: 0 })} of trading days, so the average dollar waited ${yearsText(s.averageYearsWaiting)} in T-bills before going in.`;
+        : `${describeTiming(r.scenario)}: ${what} was that far below its high on ${howOften}, so the average dollar waited ${yearsText(s.averageYearsWaiting)} in T-bills before going in.`;
     if (s.finalCash >= 0.5 && pctDays > 0) note += ` ${moneyWhole(s.finalCash)} was still waiting for the next drop at the end.`;
     notes.push(note);
   }

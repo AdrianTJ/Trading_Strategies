@@ -80,6 +80,7 @@ function Simulator({ market }: { market: Market }) {
   const outcome = useMemo(() => {
     const valid = scenarios.map((s, i) => ({ s, i })).filter(({ s }) => isValidAllocation(s.allocation));
     if (valid.length === 0) return { error: 'Every strategy needs its mix to add up to 100%.' };
+    if (plan.start > plan.end) return { error: 'The start date is after the end date.' };
     try {
       // All strategies share one window so they're compared over identical dates.
       const window = resolveWindow(market, plan, valid.map(({ s }) => s));
@@ -89,7 +90,7 @@ function Simulator({ market }: { market: Market }) {
         color: colorOf(i),
         sim: simulate(market, plan, s, window),
       }));
-      return { results, window };
+      return { results, window, skipped: scenarios.length - valid.length };
     } catch (e) {
       if (e instanceof SimulationError) return { error: e.message };
       throw e;
@@ -172,6 +173,11 @@ function Simulator({ market }: { market: Market }) {
       {lateStart && (
         <p className="note">
           {limitingAssets.join(' and ')} data starts in {formatMonth(market.dates[w.earliestIndex]!)}, so this comparison starts there.
+        </p>
+      )}
+      {'skipped' in outcome && outcome.skipped! > 0 && (
+        <p className="note">
+          {outcome.skipped === 1 ? 'One strategy isn’t' : `${outcome.skipped} strategies aren’t`} shown below until its mix adds up to 100%.
         </p>
       )}
 
