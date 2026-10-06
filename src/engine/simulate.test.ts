@@ -39,6 +39,23 @@ describe('simulate: money in', () => {
     expect(Array.from(b.arrivals).slice(1).every((x) => x === 0)).toBe(true);
   });
 
+  it('raises the amount on each anniversary of the start', () => {
+    const sim = simulate(flat, { ...earned, raise: 10 }, stocks('weekly'));
+    const pays = Array.from(sim.arrivals).filter((x) => x > 0);
+    expect(pays[0]).toBe(100);
+    expect(pays[51]).toBe(100); // last payday of year one
+    expect(pays[53]).toBeCloseTo(110, 10); // into year two
+    expect(new Set(pays.map((x) => x.toFixed(6))).size).toBe(2);
+  });
+
+  it('keeps totals equal across timings with a raise, including for a windfall', () => {
+    const plan = { ...earned, raise: 5 };
+    const totals = TIMINGS.map((t) => simulate(flat, plan, stocks(t)).summary.totalContributed);
+    for (const x of totals) expect(x).toBeCloseTo(totals[0]!, 8);
+    expect(simulate(flat, { ...plan, funding: 'upfront' }, stocks('lump')).summary.totalContributed).toBeCloseTo(totals[0]!, 8);
+    expect(totals[0]).toBeGreaterThan(simulate(flat, earned, stocks('weekly')).summary.totalContributed);
+  });
+
   it('adds the starting balance on day one', () => {
     const sim = simulate(flat, { ...earned, initial: 5000 }, stocks('monthly'));
     expect(sim.arrivals[0]).toBe(5100);

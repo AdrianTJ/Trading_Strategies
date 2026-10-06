@@ -27,6 +27,8 @@ export interface Plan {
   funding: Funding;
   /** Optional starting balance, available on day one. */
   initial: number;
+  /** Yearly raise in the amount, in percent (3 = +3% each year on the start anniversary). Default 0. */
+  raise?: number;
 }
 
 /**
@@ -148,9 +150,19 @@ export function simulate(market: Market, plan: Plan, strategy: Strategy, window 
   if (!(plan.amount >= 0 && plan.initial >= 0 && plan.amount * paydays.length + plan.initial > 0)) {
     throw new SimulationError('Nothing to invest: set an amount above zero');
   }
+  // With a raise, the amount steps up on each anniversary of the start, like a salary.
+  const anniversaries = scheduleDays(startDay, endDay, 'annually');
+  const raiseFactor = 1 + (plan.raise ?? 0) / 100;
+  if (!(raiseFactor > 0)) throw new SimulationError('The yearly raise must be above -100%');
+  let year = 0;
+  const pay = paydays.map((i) => {
+    while (year + 1 < anniversaries.length && anniversaries[year + 1]! <= days[startIndex + i]!) year++;
+    return plan.amount * Math.pow(raiseFactor, year);
+  });
+  const budget = pay.reduce((s, x) => s + x, 0);
   arrivals[0] = plan.initial;
-  if (plan.funding === 'upfront') arrivals[0] += plan.amount * paydays.length;
-  else for (const i of paydays) arrivals[i]! += plan.amount;
+  if (plan.funding === 'upfront') arrivals[0] += budget;
+  else paydays.forEach((i, k) => (arrivals[i]! += pay[k]!));
 
   // 2. When the strategy invests. Each arrival is spread evenly over the strategy's buy
   // dates before the next arrival: paid weekly and buying monthly invests everything
