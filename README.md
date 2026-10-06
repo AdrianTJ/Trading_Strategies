@@ -64,6 +64,10 @@ A comparison only starts once every asset in it has data, and the page tells you
 `.github/workflows/deploy.yml` publishes `dist/` to GitHub Pages on every push to `main`.
 One-time setup: **Settings → Pages → Source: GitHub Actions**. The build uses relative paths, so any static host works.
 
+After each deploy, `scripts/smoke-test.mjs` checks that the live site is the built app (not raw source) and
+that its assets and data load; run it by hand with `npm run smoke -- <url>`. Keep `deploy.yml` the only
+workflow that publishes to Pages: two publishers race, and whichever finishes last wins.
+
 ## Layout
 
 ```
