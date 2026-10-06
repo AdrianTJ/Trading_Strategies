@@ -4,7 +4,9 @@
 ("$100 every week since January 2020"), then compare strategies side by side on real market history:
 
 - **What you buy:** S&P 500 vs bonds vs an 80/20 mix, with or without gold, and so on
-- **When you buy:** weekly vs monthly vs quarterly, or right away, whether the money comes as a paycheck or a windfall
+- **When you buy:** weekly vs monthly vs quarterly, right away, or only after the market drops 5–30%,
+  whether the money comes as a paycheck or a windfall, and optionally rising each year with a raise
+- **In today's money:** the value chart can restate every point in end-date dollars, so inflation is visible
 - **Was it the strategy or the dates?** The same plan re-run from every start month in history, so
   one lucky (or unlucky) window doesn't pass for a rule
 

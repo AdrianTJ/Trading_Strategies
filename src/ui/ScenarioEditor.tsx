@@ -100,7 +100,7 @@ export function ScenarioEditor({ scenario, label, color, canRemove, onChange, on
           <Select
             label="How far below its high"
             value={String(scenario.dipPct ?? DEFAULT_DIP_PCT)}
-            options={DIP_OPTIONS.map((p) => ({ value: String(p), label: `${p}% or more below its high` }))}
+            options={DIP_OPTIONS.map((p) => ({ value: String(p), label: `${p}%+ below its high` }))}
             onChange={(v) => onChange({ ...scenario, dipPct: Number(v) })}
           />
         )}
