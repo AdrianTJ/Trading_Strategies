@@ -202,7 +202,7 @@ function Methodology({ market }: { market: Market }) {
           <strong>When money arrives.</strong> “As I earn it” pays your amount on your schedule, like a paycheck. “All at the start” makes the
           whole amount available on day one, like a windfall. Each strategy spreads every arrival evenly over its buy dates before the next
           one: paid weekly and buying monthly means saving up four weeks of pay; a windfall bought monthly is fed in month by month; “right
-          away” invests money the day it arrives.
+          away” invests money the day it arrives. An optional yearly raise steps the amount up on each anniversary of the start.
         </li>
         <li>
           <strong>Real prices, dividends included.</strong> Each asset is a real fund’s daily price with dividends and interest reinvested.

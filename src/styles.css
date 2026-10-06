@@ -336,6 +336,12 @@ select {
   gap: 6px;
 }
 
+.plan-amount-extras {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+}
+
 .starting-balance {
   display: inline-flex;
   align-items: center;

@@ -155,7 +155,7 @@ export function labelScenarios(scenarios: readonly Scenario[]): string[] {
 // --- URL state ---------------------------------------------------------------
 // The whole comparison lives in the URL hash, so any result can be bookmarked or shared.
 // Format (compact, human-readable):
-//   #from=2020-01-01&to=2026-09-30&amt=100&every=weekly&fund=upfront&init=0&s=us_stocks:80,us_bonds:20~weekly~annually&s=...
+//   #from=2020-01-01&to=2026-09-30&amt=100&every=weekly&fund=upfront&init=0&raise=3&s=us_stocks:80,us_bonds:20~weekly~annually&s=...
 
 const ASSET_IDS = new Set<string>(ASSETS.map((a) => a.id));
 const isDate = (d: string | null): d is ISODate => !!d && /^\d{4}-\d{2}-\d{2}$/.test(d) && !Number.isNaN(Date.parse(d));
@@ -168,6 +168,7 @@ export function encodeState({ plan, scenarios }: AppState): string {
   q.set('every', plan.frequency);
   if (plan.funding !== 'as-earned') q.set('fund', plan.funding);
   if (plan.initial) q.set('init', String(plan.initial));
+  if (plan.raise) q.set('raise', String(plan.raise));
   for (const s of scenarios) {
     const alloc = holdings(s.allocation)
       .map(([id, w]) => `${id}:${w}`)
@@ -187,6 +188,8 @@ export function decodeState(hash: string): AppState | null {
   const frequency = q.get('every') as Frequency;
   const initial = Number(q.get('init') ?? 0);
   const funding = (q.get('fund') ?? 'as-earned') as Funding;
+  const raise = Number(q.get('raise') ?? 0);
+  if (!(raise >= 0 && raise <= 50)) return null;
   if (!isDate(start) || !isDate(end) || !(amount >= 0) || !(initial >= 0) || !FREQUENCIES.includes(frequency)) return null;
   if (!FUNDINGS.includes(funding)) return null;
 
@@ -206,5 +209,5 @@ export function decodeState(hash: string): AppState | null {
     scenarios.push({ id: newId(), allocation, timing: timing as Timing, rebalance: rebalance as Rebalance, ...(dipPct !== undefined ? { dipPct } : {}) });
   }
   if (scenarios.length === 0) return null;
-  return { plan: { start, end, amount, frequency, funding, initial }, scenarios };
+  return { plan: { start, end, amount, frequency, funding, initial, ...(raise ? { raise } : {}) }, scenarios };
 }

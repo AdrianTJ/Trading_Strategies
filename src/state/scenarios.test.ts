@@ -38,7 +38,7 @@ describe('labelScenarios', () => {
 
 describe('URL state', () => {
   const state: AppState = {
-    plan: { start: '2020-01-01', end: '2026-09-30', amount: 100, frequency: 'weekly', funding: 'upfront', initial: 2500 },
+    plan: { start: '2020-01-01', end: '2026-09-30', amount: 100, frequency: 'weekly', funding: 'upfront', initial: 2500, raise: 3 },
     scenarios: [s({ us_stocks: 80, us_bonds: 20 }, 'weekly'), s({ gold: 100 }, 'lump', 'never')],
   };
 
@@ -73,6 +73,7 @@ describe('URL state', () => {
     '#from=2020-01-01&to=2026-01-01&amt=100&every=weekly&s=bitcoin:100~weekly~never',
     '#from=2020-01-01&to=2026-01-01&amt=100&every=weekly',
     '#from=2020-01-01&to=2026-01-01&amt=100&every=weekly&fund=lottery&s=us_stocks:100~weekly~never',
+    '#from=2020-01-01&to=2026-01-01&amt=100&every=weekly&raise=-20&s=us_stocks:100~weekly~never',
   ])('rejects malformed input %s', (hash) => {
     expect(decodeState(hash)).toBeNull();
   });

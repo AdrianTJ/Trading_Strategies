@@ -39,7 +39,7 @@ function useRolling(dataUrl: string, plan: Plan, results: readonly ScenarioResul
 
   // Strip the UI-only id; everything else is the strategy.
   const strategies = results.map(({ scenario: { id: _id, ...strategy } }) => strategy);
-  const key = JSON.stringify([plan.amount, plan.frequency, plan.funding, plan.initial, strategies, horizonYears]);
+  const key = JSON.stringify([plan.amount, plan.frequency, plan.funding, plan.initial, plan.raise ?? 0, strategies, horizonYears]);
 
   useEffect(() => {
     setState((s) => ({ ...s, pending: true }));

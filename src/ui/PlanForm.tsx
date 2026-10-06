@@ -81,10 +81,16 @@ export function PlanForm({ plan, onChange, dataStart, dataEnd }: Props) {
             </button>
           ))}
         </span>
-        <label className="starting-balance">
-          <span>Plus a starting balance of</span>
-          <NumberField label="Starting balance" prefix="$" value={plan.initial} onChange={(initial) => set({ initial })} max={1e10} width="8ch" />
-        </label>
+        <span className="plan-amount-extras">
+          <label className="starting-balance">
+            <span>Raise it by</span>
+            <NumberField label="Yearly raise in percent" value={plan.raise ?? 0} onChange={(raise) => set({ raise })} min={0} max={50} suffix="% a year" width="3ch" />
+          </label>
+          <label className="starting-balance">
+            <span>Plus a starting balance of</span>
+            <NumberField label="Starting balance" prefix="$" value={plan.initial} onChange={(initial) => set({ initial })} max={1e10} width="8ch" />
+          </label>
+        </span>
       </div>
     </div>
   );

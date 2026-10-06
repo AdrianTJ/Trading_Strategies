@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import type { Market } from '../engine/market';
 import type { Plan, Simulation } from '../engine/simulate';
-import { describeAllocation, describeTiming, holdings, type Scenario } from '../state/scenarios';
-import { formatMonth, moneyCompact, moneyWhole, pct, signedMoney } from './format';
+import { describeAllocation, describeTiming, FREQUENCY_NOUN, holdings, type Scenario } from '../state/scenarios';
+import { formatMonth, money, moneyCompact, moneyWhole, pct, signedMoney } from './format';
 import { LineChart, type ChartSeries } from './LineChart';
 
 export interface ScenarioResult {
@@ -161,6 +161,12 @@ export function Results({ market, plan, results }: Props) {
         </table>
       </div>
       {!annualOk && <p className="note">Annual rates are hidden for windows shorter than a year, where they exaggerate.</p>}
+      {(plan.raise ?? 0) > 0 && (
+        <p className="note">
+          Contributions rise {plan.raise}% on each anniversary of the start, from {money(plan.amount)} to{' '}
+          {money(plan.amount * Math.pow(1 + plan.raise! / 100, Math.floor(years)))} per {FREQUENCY_NOUN[plan.frequency]} by the end.
+        </p>
+      )}
       {plan.initial > 0 && <p className="note">Includes a {moneyWhole(plan.initial)} starting balance, available on day one to every strategy.</p>}
     </section>
   );
