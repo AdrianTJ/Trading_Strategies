@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import type { Market } from '../engine/market';
 import type { Plan, Simulation } from '../engine/simulate';
 import { holdings, TIMING_LABEL, type Scenario } from '../state/scenarios';
-import { formatMonth, money, moneyCompact, moneyWhole, pct, signedMoney } from './format';
+import { formatMonth, moneyCompact, moneyWhole, pct, signedMoney } from './format';
 import { LineChart, type ChartSeries } from './LineChart';
 
 export interface ScenarioResult {
@@ -170,9 +170,9 @@ function weeksText(weeks: number) {
 }
 
 function contributionText(r: ScenarioResult) {
-  const { perContribution, contributionCount } = r.sim;
-  if (r.scenario.timing === 'lump') return 'All on day one';
-  return `${money(perContribution)} ${TIMING_LABEL[r.scenario.timing].toLowerCase()} (${contributionCount}×)`;
+  const { buyCount } = r.sim;
+  const when = r.scenario.timing === 'lump' ? 'As soon as it arrived' : TIMING_LABEL[r.scenario.timing];
+  return `${when} (${buyCount} ${buyCount === 1 ? 'buy' : 'buys'})`;
 }
 
 function Row({ label, help, results, cell }: { label: string; help?: string; results: readonly ScenarioResult[]; cell: (r: ScenarioResult) => string }) {

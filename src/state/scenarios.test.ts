@@ -29,7 +29,7 @@ describe('labelScenarios', () => {
 
 describe('URL state', () => {
   const state: AppState = {
-    plan: { start: '2020-01-01', end: '2026-09-30', amount: 100, frequency: 'weekly', initial: 2500 },
+    plan: { start: '2020-01-01', end: '2026-09-30', amount: 100, frequency: 'weekly', funding: 'as-earned', initial: 2500 },
     scenarios: [s({ us_stocks: 80, us_bonds: 20 }, 'weekly'), s({ gold: 100 }, 'lump', 'never')],
   };
 
@@ -57,7 +57,7 @@ describe('URL state', () => {
 
 describe('presets', () => {
   it('every preset builds valid, 100% allocations', () => {
-    const plan = { start: '2020-01-01', end: '2026-01-01', amount: 100, frequency: 'monthly' as const, initial: 0 };
+    const plan = { start: '2020-01-01', end: '2026-01-01', amount: 100, frequency: 'monthly' as const, funding: 'as-earned' as const, initial: 0 };
     for (const p of PRESETS) {
       for (const sc of p.build(plan)) expect(Object.values(sc.allocation).reduce((a, b) => a + b!, 0)).toBe(100);
     }

@@ -179,5 +179,5 @@ export function decodeState(hash: string): AppState | null {
     scenarios.push({ id: newId(), allocation, timing: timing as Timing, rebalance: rebalance as Rebalance });
   }
   if (scenarios.length === 0) return null;
-  return { plan: { start, end, amount, frequency, initial }, scenarios };
+  return { plan: { start, end, amount, frequency, funding: 'as-earned', initial }, scenarios };
 }

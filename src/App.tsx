@@ -36,7 +36,7 @@ function useMarket() {
 }
 
 function defaultState(market: Market): AppState {
-  const plan = { start: '2020-01-01', end: market.dates.at(-1)!, amount: 100, frequency: 'weekly' as const, initial: 0 };
+  const plan = { start: '2020-01-01', end: market.dates.at(-1)!, amount: 100, frequency: 'weekly' as const, funding: 'as-earned' as const, initial: 0 };
   return { plan, scenarios: PRESETS[0]!.build(plan) };
 }
 
