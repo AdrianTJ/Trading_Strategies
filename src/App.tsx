@@ -125,7 +125,8 @@ function Simulator({ market }: { market: Market }) {
                 aria-pressed={activePreset === p.id}
                 onClick={() => {
                   setActivePreset(p.id);
-                  update({ scenarios: p.build(plan) });
+                  const nextPlan = { ...plan, ...p.plan };
+                  update({ plan: nextPlan, scenarios: p.build(nextPlan) });
                 }}
               >
                 {p.label}
@@ -194,10 +195,14 @@ function Methodology({ market }: { market: Market }) {
       <summary>How this works</summary>
       <ul>
         <li>
-          <strong>Fair comparisons.</strong> Every strategy invests exactly the same total over the same dates. Your amount and schedule set that
-          total; other schedules split it evenly across their own buy dates, and “all at once” invests it on the first day. Each schedule
-          buys at the start of its period, so “every quarter” puts the whole quarter’s budget in on the quarter’s first day. That means less
-          frequent schedules invest a little earlier on average, which is usually what decides the (small) difference between them.
+          <strong>Fair comparisons.</strong> Every strategy receives exactly the same money on the same dates. They differ only in when they
+          move it from cash into the market. Money waiting to be invested sits in T-bills, earns their interest, and counts toward the balance.
+        </li>
+        <li>
+          <strong>When money arrives.</strong> “As I earn it” pays your amount on your schedule, like a paycheck. “All at the start” makes the
+          whole amount available on day one, like a windfall. Each strategy spreads every arrival evenly over its buy dates before the next
+          one: paid weekly and buying monthly means saving up four weeks of pay; a windfall bought monthly is fed in month by month; “right
+          away” invests money the day it arrives.
         </li>
         <li>
           <strong>Real prices, dividends included.</strong> Each asset is a real fund’s daily price with dividends and interest reinvested.

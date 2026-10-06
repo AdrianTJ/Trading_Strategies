@@ -108,8 +108,16 @@ export function Results({ market, plan, results }: Props) {
           </thead>
           <tbody>
             <Row label="Ended with" help={`On ${formatMonth(endDate)}`} results={results} cell={(r) => moneyWhole(r.sim.summary.finalValue)} />
-            <Row label="Put in" results={results} cell={(r) => moneyWhole(r.sim.summary.totalContributed)} />
-            <Row label="How it went in" results={results} cell={(r) => contributionText(r)} />
+            <Row label="Put in" help="Money that arrived" results={results} cell={(r) => moneyWhole(r.sim.summary.totalContributed)} />
+            <Row label="When it was invested" results={results} cell={(r) => contributionText(r)} />
+            {results.some((r) => r.sim.summary.finalCash >= 0.5) && (
+              <Row
+                label="Still waiting in cash"
+                help="Arrived after the strategy’s last buy, so it’s held in T-bills"
+                results={results}
+                cell={(r) => (r.sim.summary.finalCash >= 0.5 ? moneyWhole(r.sim.summary.finalCash) : '—')}
+              />
+            )}
             <Row
               label="Average dollar invested for"
               help="Money that goes in earlier has longer to grow (or fall)"
@@ -153,7 +161,7 @@ export function Results({ market, plan, results }: Props) {
         </table>
       </div>
       {!annualOk && <p className="note">Annual rates are hidden for windows shorter than a year, where they exaggerate.</p>}
-      {plan.initial > 0 && <p className="note">Includes a {moneyWhole(plan.initial)} starting balance invested on day one by every strategy.</p>}
+      {plan.initial > 0 && <p className="note">Includes a {moneyWhole(plan.initial)} starting balance, available on day one to every strategy.</p>}
     </section>
   );
 }
@@ -233,7 +241,7 @@ function Takeaways({ results }: { results: readonly ScenarioResult[] }) {
       const spreadLow = spread.sim.summary.worstShortfall.amount;
       if (lumpLow < spreadLow - 1) {
         notes.push(
-          `The cost of investing all at once: at its worst it sat ${moneyWhole(-lumpLow)} below what was put in, versus ${moneyWhole(-spreadLow)} when spread out ${name(spread)}.`,
+          `The cost of investing right away: at its worst it sat ${moneyWhole(-lumpLow)} below what was put in, versus ${moneyWhole(-spreadLow)} when spread out ${name(spread)}.`,
         );
       }
     }

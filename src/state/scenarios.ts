@@ -1,6 +1,6 @@
 import { ASSET_BY_ID, ASSETS, type AssetId } from '../engine/assets';
 import type { Frequency, ISODate } from '../engine/dates';
-import type { Allocation, Plan, Rebalance, Strategy, Timing } from '../engine/simulate';
+import type { Allocation, Funding, Plan, Rebalance, Strategy, Timing } from '../engine/simulate';
 
 export interface Scenario extends Strategy {
   /** Stable key for React and for color assignment. */
@@ -17,6 +17,7 @@ export const MAX_SCENARIOS = 4;
 export const FREQUENCIES: readonly Frequency[] = ['weekly', 'biweekly', 'monthly', 'quarterly', 'annually'];
 export const TIMINGS: readonly Timing[] = ['lump', ...FREQUENCIES];
 export const REBALANCES: readonly Rebalance[] = ['never', 'quarterly', 'annually'];
+export const FUNDINGS: readonly Funding[] = ['as-earned', 'upfront'];
 
 /** "every ___" in the plan sentence. */
 export const FREQUENCY_NOUN: Record<Frequency, string> = {
@@ -28,7 +29,9 @@ export const FREQUENCY_NOUN: Record<Frequency, string> = {
 };
 
 export const TIMING_LABEL: Record<Timing, string> = {
-  lump: 'All at once',
+  // Invest money the day it's available: everything at once for a windfall, each
+  // paycheck as it lands otherwise. One label reads right for both.
+  lump: 'Right away',
   weekly: 'Every week',
   biweekly: 'Every two weeks',
   monthly: 'Every month',
@@ -58,6 +61,8 @@ export interface Preset {
   /** The question this comparison answers. */
   question: string;
   build: (plan: Plan) => Scenario[];
+  /** Plan settings the question depends on (e.g. a windfall for lump sum vs. spreading out). */
+  plan?: Partial<Plan>;
 }
 
 export const PRESETS: readonly Preset[] = [
@@ -74,14 +79,16 @@ export const PRESETS: readonly Preset[] = [
   {
     id: 'cadence',
     label: 'Weekly or monthly?',
-    question: 'Same money, same S&P 500 fund. Only how often you buy changes.',
+    question: 'Paid on the same schedule, buying the same S&P 500 fund. Only how often you buy changes; pay waiting to be invested earns T-bill interest.',
+    plan: { funding: 'as-earned' },
     build: () => [make({ us_stocks: 100 }, 'weekly'), make({ us_stocks: 100 }, 'monthly'), make({ us_stocks: 100 }, 'quarterly')],
   },
   {
     id: 'lump',
     label: 'All at once or over time?',
-    question: 'The whole budget on day one versus spreading it out.',
-    build: (p) => [make({ us_stocks: 100 }, 'lump'), make({ us_stocks: 100 }, p.frequency)],
+    question: 'You have the whole amount today. Invest it right away, or keep it in T-bills and feed it in month by month?',
+    plan: { funding: 'upfront' },
+    build: () => [make({ us_stocks: 100 }, 'lump'), make({ us_stocks: 100 }, 'monthly')],
   },
   {
     id: 'gold',
@@ -133,7 +140,7 @@ export function labelScenarios(scenarios: readonly Scenario[]): string[] {
 // --- URL state ---------------------------------------------------------------
 // The whole comparison lives in the URL hash, so any result can be bookmarked or shared.
 // Format (compact, human-readable):
-//   #from=2020-01-01&to=2026-09-30&amt=100&every=weekly&init=0&s=us_stocks:80,us_bonds:20~weekly~annually&s=...
+//   #from=2020-01-01&to=2026-09-30&amt=100&every=weekly&fund=upfront&init=0&s=us_stocks:80,us_bonds:20~weekly~annually&s=...
 
 const ASSET_IDS = new Set<string>(ASSETS.map((a) => a.id));
 const isDate = (d: string | null): d is ISODate => !!d && /^\d{4}-\d{2}-\d{2}$/.test(d) && !Number.isNaN(Date.parse(d));
@@ -144,6 +151,7 @@ export function encodeState({ plan, scenarios }: AppState): string {
   q.set('to', plan.end);
   q.set('amt', String(plan.amount));
   q.set('every', plan.frequency);
+  if (plan.funding !== 'as-earned') q.set('fund', plan.funding);
   if (plan.initial) q.set('init', String(plan.initial));
   for (const s of scenarios) {
     const alloc = holdings(s.allocation)
@@ -163,7 +171,9 @@ export function decodeState(hash: string): AppState | null {
   const amount = Number(q.get('amt'));
   const frequency = q.get('every') as Frequency;
   const initial = Number(q.get('init') ?? 0);
+  const funding = (q.get('fund') ?? 'as-earned') as Funding;
   if (!isDate(start) || !isDate(end) || !(amount >= 0) || !(initial >= 0) || !FREQUENCIES.includes(frequency)) return null;
+  if (!FUNDINGS.includes(funding)) return null;
 
   const scenarios: Scenario[] = [];
   for (const raw of q.getAll('s').slice(0, MAX_SCENARIOS)) {
@@ -179,5 +189,5 @@ export function decodeState(hash: string): AppState | null {
     scenarios.push({ id: newId(), allocation, timing: timing as Timing, rebalance: rebalance as Rebalance });
   }
   if (scenarios.length === 0) return null;
-  return { plan: { start, end, amount, frequency, funding: 'as-earned', initial }, scenarios };
+  return { plan: { start, end, amount, frequency, funding, initial }, scenarios };
 }

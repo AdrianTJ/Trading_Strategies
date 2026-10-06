@@ -4,7 +4,7 @@
 ("$100 every week since January 2020"), then compare strategies side by side on real market history:
 
 - **What you buy:** S&P 500 vs bonds vs an 80/20 mix, with or without gold, and so on
-- **When you buy:** weekly vs monthly vs quarterly, or everything on day one
+- **When you buy:** weekly vs monthly vs quarterly, or right away, whether the money comes as a paycheck or a windfall
 - **Was it the strategy or the dates?** The same plan re-run from every start month in history, so
   one lucky (or unlucky) window doesn't pass for a rule
 
@@ -21,13 +21,15 @@ npm run build      # static site in dist/
 
 ## How the numbers work
 
-- **Fair comparisons by construction.** Every strategy invests exactly the same total over the same
-  dates. Your amount × your schedule sets the total; other schedules split it evenly across their own
-  buy dates, and "all at once" puts it all in on day one. Without this, "weekly vs monthly" just
-  measures who put in more money.
-- **Buys happen at the start of each period.** "Every quarter" invests the quarter's budget on its first
-  day. That means less frequent schedules invest slightly earlier on average, which usually explains
-  the small gaps between them. The app says so instead of implying one schedule is smarter.
+- **Fair comparisons by construction.** Every strategy receives exactly the same money on the same
+  dates; they differ only in when they move it from cash into the market. Without this, "weekly vs
+  monthly" just measures who put in more money.
+- **When money arrives is part of the plan.** "As I earn it" pays your amount on your schedule, like a
+  paycheck; "all at the start" makes the whole amount available on day one, like a windfall. Each
+  strategy spreads every arrival evenly over its buy dates before the next one. Paid weekly and buying
+  monthly means saving up four weeks of pay; a windfall bought monthly is classic dollar-cost averaging.
+- **Waiting money earns T-bill interest** and counts toward the balance, and returns are measured from
+  when money arrives, so time spent waiting counts against a strategy.
 - **Total return.** Prices are real funds' dividend- and interest-adjusted closing prices, so income
   is reinvested.
 - **Annual return is money-weighted (XIRR).** Each dollar only earns credit for the time it was

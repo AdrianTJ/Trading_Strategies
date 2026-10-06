@@ -305,6 +305,22 @@ select {
   }
 }
 
+.funding {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+}
+
+.funding-help {
+  flex-basis: 100%;
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
 .plan-extras {
   margin-top: 16px;
   display: flex;
