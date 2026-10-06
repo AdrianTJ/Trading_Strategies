@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { Market } from '../engine/market';
-import type { Plan, Simulation } from '../engine/simulate';
+import { inEndDollars, type Plan, type Simulation } from '../engine/simulate';
 import { describeAllocation, describeTiming, FREQUENCY_NOUN, holdings, type Scenario } from '../state/scenarios';
 import { formatMonth, money, moneyCompact, moneyWhole, pct, signedMoney } from './format';
 import { LineChart, type ChartSeries } from './LineChart';
@@ -26,13 +26,18 @@ export function Results({ market, plan, results }: Props) {
   const years = first.summary.years;
   const annualOk = years >= 1;
 
+  // Nominal dollars, or every point restated in end-date dollars with CPI.
+  const [inTodaysMoney, setInTodaysMoney] = useState(false);
+  const real = useMemo(() => (inTodaysMoney ? results.map((r) => inEndDollars(market, r.sim)) : null), [inTodaysMoney, market, results]);
   const series: ChartSeries[] = useMemo(
-    () => results.map((r) => ({ key: r.scenario.id, label: r.label, color: r.color, values: r.sim.value })),
-    [results],
+    () => results.map((r, k) => ({ key: r.scenario.id, label: r.label, color: r.color, values: real ? real[k]!.value : r.sim.value })),
+    [results, real],
   );
-  // One "money put in" line only makes sense when every strategy puts money in on the same days.
-  const sameSchedule = results.every((r) => r.scenario.timing === results[0]!.scenario.timing);
-  const reference = useMemo(() => (sameSchedule ? { label: 'Money put in', values: first.contributed } : undefined), [sameSchedule, first]);
+  // Every strategy receives the same money on the same days, so one "money put in" line serves all.
+  const reference = useMemo(
+    () => ({ label: real ? 'Put in (today’s money)' : 'Money put in', values: real ? real[0]!.contributed : first.contributed }),
+    [real, first],
+  );
 
   const sorted = [...results].sort((a, b) => b.sim.summary.finalValue - a.sim.summary.finalValue);
   const best = sorted[0]!;
@@ -80,7 +85,25 @@ export function Results({ market, plan, results }: Props) {
       </div>
 
       <figure className="card">
-        <figcaption className="card-title">What it was worth along the way</figcaption>
+        <div className="figure-head">
+          <figcaption className="card-title">
+            What it was worth along the way{real && <span className="card-title-sub"> in {formatMonth(endDate)} dollars</span>}
+          </figcaption>
+          <div className="quick-range" role="group" aria-label="Dollars shown">
+            <button type="button" className="chip chip--small" aria-pressed={!inTodaysMoney} onClick={() => setInTodaysMoney(false)}>
+              Dollars of the day
+            </button>
+            <button type="button" className="chip chip--small" aria-pressed={inTodaysMoney} onClick={() => setInTodaysMoney(true)}>
+              In today’s money
+            </button>
+          </div>
+        </div>
+        {real && (
+          <p className="note chart-note">
+            Every point is restated in {formatMonth(endDate)} dollars using CPI, so the gap between the lines and money put in is real growth in
+            what the money could buy.
+          </p>
+        )}
         <LineChart
           dates={dates}
           series={series}
@@ -109,6 +132,12 @@ export function Results({ market, plan, results }: Props) {
           <tbody>
             <Row label="Ended with" help={`On ${formatMonth(endDate)}`} results={results} cell={(r) => moneyWhole(r.sim.summary.finalValue)} />
             <Row label="Put in" help="Money that arrived" results={results} cell={(r) => moneyWhole(r.sim.summary.totalContributed)} />
+            <Row
+              label="Put in, in today’s money"
+              help={`Each amount restated in ${formatMonth(endDate)} dollars`}
+              results={results}
+              cell={(r) => moneyWhole(r.sim.summary.contributedInEndDollars)}
+            />
             <Row label="When it was invested" results={results} cell={(r) => contributionText(r)} />
             {results.some((r) => r.sim.summary.finalCash >= 0.5) && (
               <Row

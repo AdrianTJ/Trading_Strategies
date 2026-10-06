@@ -363,3 +363,24 @@ function summarize(
     years: span / 365.25,
   };
 }
+
+/**
+ * A simulation restated in end-date dollars using CPI: each day's balance scaled by
+ * how much prices rose from that day to the end, and each arrival restated at the
+ * time it arrived (the purchasing power given up). The final balance is unchanged.
+ */
+export function inEndDollars(market: Market, sim: Simulation): { value: Float64Array; contributed: Float64Array } {
+  const { cpiByDay } = market;
+  const n = sim.value.length;
+  const cpiEnd = cpiByDay[sim.endIndex]!;
+  const value = new Float64Array(n);
+  const contributed = new Float64Array(n);
+  let total = 0;
+  for (let i = 0; i < n; i++) {
+    const factor = cpiEnd / cpiByDay[sim.startIndex + i]!;
+    total += sim.arrivals[i]! * factor;
+    value[i] = sim.value[i]! * factor;
+    contributed[i] = total;
+  }
+  return { value, contributed };
+}

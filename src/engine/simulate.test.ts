@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { syntheticMarket } from './testMarket';
-import { resolveWindow, simulate, SimulationError, type Plan, type Strategy } from './simulate';
+import { inEndDollars, resolveWindow, simulate, SimulationError, type Plan, type Strategy } from './simulate';
 
 const flat = syntheticMarket('2020-01-01', 600, { us_stocks: () => 50, us_bonds: () => 20 });
 // Grows 0.04% per trading day, smoothly.
@@ -224,6 +224,20 @@ describe('simulate: results', () => {
     const s = simulate(m, windfall, stocks('lump')).summary;
     expect(s.realMoneyWeightedReturn).toBeLessThan(s.moneyWeightedReturn - 0.1);
     expect(s.contributedInEndDollars).toBeGreaterThan(s.totalContributed);
+  });
+
+  it('restates a run in end-date dollars', () => {
+    const m = syntheticMarket('2020-01-01', 600, { us_stocks: (i) => 100 * Math.pow(1.0004, i) }, {}, (i) => 100 * Math.pow(1.01, i));
+    const sim = simulate(m, earned, stocks('weekly'));
+    const real = inEndDollars(m, sim);
+    const last = sim.value.length - 1;
+    expect(real.value[last]).toBeCloseTo(sim.value[last]!, 8);
+    expect(real.contributed[last]).toBeCloseTo(sim.summary.contributedInEndDollars, 6);
+    // Earlier balances are worth more in end-date dollars when prices have risen since.
+    expect(real.value[100]!).toBeGreaterThan(sim.value[100]!);
+    // With flat CPI nothing changes.
+    const flatReal = inEndDollars(flat, simulate(flat, earned, stocks('weekly')));
+    expect(flatReal.value[100]).toBeCloseTo(simulate(flat, earned, stocks('weekly')).value[100]!, 10);
   });
 
   it('rejects a plan with nothing to invest', () => {
