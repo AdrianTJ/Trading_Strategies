@@ -29,8 +29,13 @@ export interface Plan {
   initial: number;
 }
 
-/** 'lump' = invest money the day it becomes available. */
-export type Timing = 'lump' | Frequency;
+/**
+ * When a strategy moves waiting cash into the market:
+ * - 'lump': the day money becomes available.
+ * - a frequency: on that schedule.
+ * - 'dip': only while its mix is at least `dipPct`% below its all-time high.
+ */
+export type Timing = 'lump' | Frequency | 'dip';
 export type Rebalance = 'never' | 'quarterly' | 'annually';
 
 /** Percent per asset; should sum to 100. */
@@ -40,7 +45,11 @@ export interface Strategy {
   allocation: Allocation;
   timing: Timing;
   rebalance: Rebalance;
+  /** For timing 'dip': how far below its high (percent) the mix must be before buying. */
+  dipPct?: number;
 }
+
+export const DEFAULT_DIP_PCT = 10;
 
 export interface Simulation {
   /** Calendar index range [startIndex, endIndex] in market.dates. */
@@ -60,6 +69,8 @@ export interface Simulation {
   growthIndex: Float64Array;
   /** Number of days with a purchase. */
   buyCount: number;
+  /** For 'dip' timing: trading days in the window the mix was far enough below its high to buy. */
+  dipDays: number;
   summary: Summary;
 }
 
@@ -145,16 +156,23 @@ export function simulate(market: Market, plan: Plan, strategy: Strategy, window 
   // windfall bought monthly is classic dollar-cost averaging. buyShare[i] is the
   // fraction of waiting cash to invest on day i.
   const buyShare = new Float64Array(n);
-  const buyDays = strategy.timing === 'lump' ? arrivalOffsets(arrivals) : executionOffsets(scheduleDays(startDay, endDay, strategy.timing));
-  const arrivalDays = arrivalOffsets(arrivals);
-  let a = 0;
-  for (let k = 0; k < buyDays.length; k++) {
-    const b = buyDays[k]!;
-    while (a < arrivalDays.length && arrivalDays[a]! <= b) a++;
-    const nextArrival = a < arrivalDays.length ? arrivalDays[a]! : n;
-    let remaining = 0;
-    for (let m = k; m < buyDays.length && buyDays[m]! < nextArrival; m++) remaining++;
-    buyShare[b] = 1 / remaining;
+  let dipDays = 0;
+  if (strategy.timing === 'dip') {
+    // Buy-the-dip invests everything waiting on any day the mix is far enough down.
+    const inDip = dipMask(market, strategy, startIndex, endIndex);
+    for (let i = 0; i < n; i++) if (inDip[i]) (buyShare[i] = 1), dipDays++;
+  } else {
+    const buyDays = strategy.timing === 'lump' ? arrivalOffsets(arrivals) : executionOffsets(scheduleDays(startDay, endDay, strategy.timing));
+    const arrivalDays = arrivalOffsets(arrivals);
+    let a = 0;
+    for (let k = 0; k < buyDays.length; k++) {
+      const b = buyDays[k]!;
+      while (a < arrivalDays.length && arrivalDays[a]! <= b) a++;
+      const nextArrival = a < arrivalDays.length ? arrivalDays[a]! : n;
+      let remaining = 0;
+      for (let m = k; m < buyDays.length && buyDays[m]! < nextArrival; m++) remaining++;
+      buyShare[b] = 1 / remaining;
+    }
   }
 
   const rebalanceOn = new Uint8Array(n);
@@ -222,8 +240,36 @@ export function simulate(market: Market, plan: Plan, strategy: Strategy, window 
     buys,
     growthIndex,
     buyCount,
+    dipDays,
     summary: summarize(market, startIndex, arrivals, buys, value, cashOut, contributed, growthIndex),
   };
+}
+
+/**
+ * For each day in the window: is the strategy's mix at least dipPct% below its
+ * all-time high? The mix is tracked as a daily-rebalanced index of its assets from
+ * the first day they all have prices, so the "high" includes history before the
+ * window: starting in 2020 doesn't reset the S&P 500's high.
+ */
+function dipMask(market: Market, strategy: Strategy, startIndex: number, endIndex: number): Uint8Array {
+  const weights = weightsOf(strategy.allocation);
+  const prices = weights.map(([id]) => market.assets[id].prices);
+  const from = firstCommonIndex(
+    market,
+    weights.map(([id]) => id),
+  );
+  const threshold = 1 - (strategy.dipPct ?? DEFAULT_DIP_PCT) / 100;
+  const mask = new Uint8Array(endIndex - startIndex + 1);
+  let index = 1;
+  let high = 1;
+  for (let t = from + 1; t <= endIndex; t++) {
+    let r = 0;
+    for (let j = 0; j < weights.length; j++) r += weights[j]![1] * (prices[j]![t]! / prices[j]![t - 1]!);
+    index *= r;
+    if (index > high) high = index;
+    if (t >= startIndex && index <= high * threshold) mask[t - startIndex] = 1;
+  }
+  return mask;
 }
 
 function arrivalOffsets(arrivals: Float64Array): number[] {

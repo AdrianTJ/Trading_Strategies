@@ -37,6 +37,7 @@ export const TIMING_LABEL: Record<Timing, string> = {
   monthly: 'Every month',
   quarterly: 'Every quarter',
   annually: 'Once a year',
+  dip: 'Only after a drop',
 };
 
 export const REBALANCE_LABEL: Record<Rebalance, string> = {

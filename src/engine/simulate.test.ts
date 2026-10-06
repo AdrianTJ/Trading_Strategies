@@ -87,6 +87,54 @@ describe('simulate: when it goes in', () => {
   });
 });
 
+describe('simulate: buy the dip', () => {
+  // Climbs to 120 by day 100, falls ~29% to 85 by day 150, recovers to 130 by day 263.
+  // (The fall is steep enough that no day sits exactly on a threshold.)
+  const vShape = syntheticMarket('2020-01-01', 300, {
+    us_stocks: (i) => (i <= 100 ? 100 + 0.2 * i : i <= 150 ? 120 - 0.7 * (i - 100) : Math.min(130, 85 + 0.4 * (i - 150))),
+  });
+  const plan: Plan = { ...earned, end: '2021-02-01' };
+  const dip = (dipPct: number): Strategy => ({ allocation: { us_stocks: 100 }, timing: 'dip', rebalance: 'never', dipPct });
+
+  it('holds cash until the mix is far enough below its high, then invests everything waiting', () => {
+    const sim = simulate(vShape, plan, dip(10));
+    // 10% below 120 is 108: day 117 is 108.1, day 118 is 107.4.
+    const firstBuy = Array.from(sim.buys).findIndex((x) => x > 0);
+    expect(firstBuy).toBe(118);
+    expect(sim.buys[firstBuy]).toBeCloseTo(sim.contributed[firstBuy]!, 6);
+    for (let i = 0; i < firstBuy; i++) expect(sim.cash[i]).toBeCloseTo(sim.contributed[i]!, 6);
+  });
+
+  it('keeps investing new money while the dip lasts, and waits again after it ends', () => {
+    const sim = simulate(vShape, plan, dip(10));
+    const buyDays = Array.from(sim.buys).flatMap((x, i) => (x > 0 ? [i] : []));
+    expect(sim.dipDays).toBeGreaterThan(30);
+    expect(buyDays.length).toBeGreaterThan(1);
+    // Back above 108 from day 208 (85 + 0.4 × 58): pay after that waits in cash.
+    expect(buyDays.at(-1)!).toBeLessThan(208);
+    expect(sim.summary.finalCash).toBeGreaterThan(0);
+  });
+
+  it('never buys if the drop never comes', () => {
+    const sim = simulate(rising, earned, dip(10));
+    expect(sim.buyCount).toBe(0);
+    expect(sim.summary.finalCash).toBeCloseTo(sim.summary.totalContributed, 6);
+    expect(sim.summary.averageYearsInvested).toBe(0);
+  });
+
+  it('measures the high from all available history, not from the window start', () => {
+    // Already 20% below an earlier high when the window opens.
+    const fallen = syntheticMarket('2019-01-01', 500, { us_stocks: (i) => (i < 100 ? 100 : 80) });
+    const sim = simulate(fallen, { ...earned, start: '2019-09-01', end: '2020-06-01' }, dip(10));
+    expect(sim.buys[0]).toBeGreaterThan(0);
+  });
+
+  it('needs a deeper drop for a bigger threshold', () => {
+    expect(simulate(vShape, plan, dip(20)).dipDays).toBeLessThan(simulate(vShape, plan, dip(10)).dipDays);
+    expect(simulate(vShape, plan, dip(30)).buyCount).toBe(0); // bottoms at -29%
+  });
+});
+
 describe('simulate: results', () => {
   it('is worth exactly what went in when prices never move and cash pays nothing', () => {
     const sim = simulate(flat, earned, { allocation: { us_stocks: 80, us_bonds: 20 }, timing: 'monthly', rebalance: 'quarterly' });
