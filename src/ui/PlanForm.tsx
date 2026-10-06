@@ -1,5 +1,5 @@
 import { addDays, addMonths, type ISODate } from '../engine/dates';
-import type { Plan } from '../engine/simulate';
+import type { Funding, Plan } from '../engine/simulate';
 import { FREQUENCIES, FREQUENCY_NOUN } from '../state/scenarios';
 import { MonthField, NumberField, Select } from './fields';
 
@@ -10,6 +10,15 @@ interface Props {
   dataStart: ISODate;
   dataEnd: ISODate;
 }
+
+const FUNDING_OPTIONS: readonly { value: Funding; label: string; help: string }[] = [
+  { value: 'as-earned', label: 'as I earn it', help: 'Like a paycheck: each amount arrives on schedule and waits in T-bills until the strategy buys.' },
+  {
+    value: 'upfront',
+    label: 'all at the start',
+    help: 'Like a windfall: the whole amount is there on day one and waits in T-bills until the strategy buys.',
+  },
+];
 
 const lastDayOfMonth = (ym: string) => addDays(addMonths(`${ym}-01`, 1), -1);
 
@@ -46,6 +55,24 @@ export function PlanForm({ plan, onChange, dataStart, dataEnd }: Props) {
         <span>to</span>
         <MonthField label="End" value={plan.end.slice(0, 7)} min={minYM} max={maxYM} onChange={setEnd} />
       </p>
+      <div className="funding" role="radiogroup" aria-label="When the money is available">
+        <span className="funding-label">The money is available</span>
+        {FUNDING_OPTIONS.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            role="radio"
+            aria-checked={plan.funding === o.value}
+            className="chip chip--small"
+            aria-pressed={plan.funding === o.value}
+            onClick={() => set({ funding: o.value })}
+            title={o.help}
+          >
+            {o.label}
+          </button>
+        ))}
+        <span className="funding-help">{FUNDING_OPTIONS.find((o) => o.value === plan.funding)!.help}</span>
+      </div>
       <div className="plan-extras">
         <span className="quick-range" role="group" aria-label="Quick date ranges">
           {([5, 10, 20, 'max'] as const).map((y) => (
@@ -54,10 +81,16 @@ export function PlanForm({ plan, onChange, dataStart, dataEnd }: Props) {
             </button>
           ))}
         </span>
-        <label className="starting-balance">
-          <span>Plus a starting balance of</span>
-          <NumberField label="Starting balance" prefix="$" value={plan.initial} onChange={(initial) => set({ initial })} max={1e10} width="8ch" />
-        </label>
+        <span className="plan-amount-extras">
+          <label className="starting-balance">
+            <span>Raise it by</span>
+            <NumberField label="Yearly raise in percent" value={plan.raise ?? 0} onChange={(raise) => set({ raise })} min={0} max={50} suffix="% a year" width="3ch" />
+          </label>
+          <label className="starting-balance">
+            <span>Plus a starting balance of</span>
+            <NumberField label="Starting balance" prefix="$" value={plan.initial} onChange={(initial) => set({ initial })} max={1e10} width="8ch" />
+          </label>
+        </span>
       </div>
     </div>
   );

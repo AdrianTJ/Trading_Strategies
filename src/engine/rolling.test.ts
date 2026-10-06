@@ -5,7 +5,7 @@ import { syntheticMarket } from './testMarket';
 
 // ~8 years of weekdays. Stocks rise steadily; "gold" is flat and only starts after a year.
 const market = syntheticMarket('2010-01-01', 2100, { us_stocks: (i) => 100 * Math.pow(1.0003, i), gold: () => 50 }, { gold: 260 });
-const plan: Plan = { start: '2010-01-01', end: '2018-01-01', amount: 100, frequency: 'monthly', initial: 0 };
+const plan: Plan = { start: '2010-01-01', end: '2018-01-01', amount: 100, frequency: 'monthly', funding: 'as-earned', initial: 0 };
 const stocks: Strategy = { allocation: { us_stocks: 100 }, timing: 'monthly', rebalance: 'never' };
 const gold: Strategy = { allocation: { gold: 100 }, timing: 'monthly', rebalance: 'never' };
 

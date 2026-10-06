@@ -36,7 +36,7 @@ function useMarket() {
 }
 
 function defaultState(market: Market): AppState {
-  const plan = { start: '2020-01-01', end: market.dates.at(-1)!, amount: 100, frequency: 'weekly' as const, initial: 0 };
+  const plan = { start: '2020-01-01', end: market.dates.at(-1)!, amount: 100, frequency: 'weekly' as const, funding: 'as-earned' as const, initial: 0 };
   return { plan, scenarios: PRESETS[0]!.build(plan) };
 }
 
@@ -80,6 +80,7 @@ function Simulator({ market }: { market: Market }) {
   const outcome = useMemo(() => {
     const valid = scenarios.map((s, i) => ({ s, i })).filter(({ s }) => isValidAllocation(s.allocation));
     if (valid.length === 0) return { error: 'Every strategy needs its mix to add up to 100%.' };
+    if (plan.start > plan.end) return { error: 'The start date is after the end date.' };
     try {
       // All strategies share one window so they're compared over identical dates.
       const window = resolveWindow(market, plan, valid.map(({ s }) => s));
@@ -89,7 +90,7 @@ function Simulator({ market }: { market: Market }) {
         color: colorOf(i),
         sim: simulate(market, plan, s, window),
       }));
-      return { results, window };
+      return { results, window, skipped: scenarios.length - valid.length };
     } catch (e) {
       if (e instanceof SimulationError) return { error: e.message };
       throw e;
@@ -125,7 +126,8 @@ function Simulator({ market }: { market: Market }) {
                 aria-pressed={activePreset === p.id}
                 onClick={() => {
                   setActivePreset(p.id);
-                  update({ scenarios: p.build(plan) });
+                  const nextPlan = { ...plan, ...p.plan };
+                  update({ plan: nextPlan, scenarios: p.build(nextPlan) });
                 }}
               >
                 {p.label}
@@ -173,6 +175,11 @@ function Simulator({ market }: { market: Market }) {
           {limitingAssets.join(' and ')} data starts in {formatMonth(market.dates[w.earliestIndex]!)}, so this comparison starts there.
         </p>
       )}
+      {'skipped' in outcome && outcome.skipped! > 0 && (
+        <p className="note">
+          {outcome.skipped === 1 ? 'One strategy isn’t' : `${outcome.skipped} strategies aren’t`} shown below until its mix adds up to 100%.
+        </p>
+      )}
 
       {'error' in outcome ? (
         <p className="status">{outcome.error}</p>
@@ -194,10 +201,14 @@ function Methodology({ market }: { market: Market }) {
       <summary>How this works</summary>
       <ul>
         <li>
-          <strong>Fair comparisons.</strong> Every strategy invests exactly the same total over the same dates. Your amount and schedule set that
-          total; other schedules split it evenly across their own buy dates, and “all at once” invests it on the first day. Each schedule
-          buys at the start of its period, so “every quarter” puts the whole quarter’s budget in on the quarter’s first day. That means less
-          frequent schedules invest a little earlier on average, which is usually what decides the (small) difference between them.
+          <strong>Fair comparisons.</strong> Every strategy receives exactly the same money on the same dates. They differ only in when they
+          move it from cash into the market. Money waiting to be invested sits in T-bills, earns their interest, and counts toward the balance.
+        </li>
+        <li>
+          <strong>When money arrives.</strong> “As I earn it” pays your amount on your schedule, like a paycheck. “All at the start” makes the
+          whole amount available on day one, like a windfall. Each strategy spreads every arrival evenly over its buy dates before the next
+          one: paid weekly and buying monthly means saving up four weeks of pay; a windfall bought monthly is fed in month by month; “right
+          away” invests money the day it arrives. An optional yearly raise steps the amount up on each anniversary of the start.
         </li>
         <li>
           <strong>Real prices, dividends included.</strong> Each asset is a real fund’s daily price with dividends and interest reinvested.

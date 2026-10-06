@@ -4,25 +4,40 @@ import { dayIndexOnOrAfter, firstCommonIndex, indexOnOrAfter, indexOnOrBefore, t
 import { annualize, maxDrawdown, xirrDays, type Drawdown } from './metrics';
 
 /**
- * How much money goes in, shared by every strategy being compared.
+ * When money becomes available to invest:
+ * - 'as-earned': `amount` arrives every `frequency` period, like a paycheck.
+ * - 'upfront': the whole window's budget is available on day one, like a windfall.
+ */
+export type Funding = 'as-earned' | 'upfront';
+
+/**
+ * How much money goes in and when it becomes available, shared by every strategy
+ * being compared.
  *
- * The user states a budget the way they think about it ("$100 every week"). Every
- * strategy then invests exactly the same total over the same window, only spread
- * differently, so differences in outcome come from the strategy and not from one
- * of them simply having more money in.
+ * Every strategy receives exactly the same money on the same dates. Strategies differ
+ * only in when they move that money from cash into the market, so differences in
+ * outcome come from the strategy, never from one of them simply having more money.
  */
 export interface Plan {
   start: ISODate;
   end: ISODate;
-  /** Contribution per `frequency` period. */
+  /** Money available per `frequency` period. */
   amount: number;
   frequency: Frequency;
-  /** Optional starting balance, invested on day one by every strategy. */
+  funding: Funding;
+  /** Optional starting balance, available on day one. */
   initial: number;
+  /** Yearly raise in the amount, in percent (3 = +3% each year on the start anniversary). Default 0. */
+  raise?: number;
 }
 
-/** 'lump' = put the whole window's budget in on day one. */
-export type Timing = 'lump' | Frequency;
+/**
+ * When a strategy moves waiting cash into the market:
+ * - 'lump': the day money becomes available.
+ * - a frequency: on that schedule.
+ * - 'dip': only while its mix is at least `dipPct`% below its all-time high.
+ */
+export type Timing = 'lump' | Frequency | 'dip';
 export type Rebalance = 'never' | 'quarterly' | 'annually';
 
 /** Percent per asset; should sum to 100. */
@@ -32,20 +47,32 @@ export interface Strategy {
   allocation: Allocation;
   timing: Timing;
   rebalance: Rebalance;
+  /** For timing 'dip': how far below its high (percent) the mix must be before buying. */
+  dipPct?: number;
 }
+
+export const DEFAULT_DIP_PCT = 10;
 
 export interface Simulation {
   /** Calendar index range [startIndex, endIndex] in market.dates. */
   startIndex: number;
   endIndex: number;
-  /** Per trading day in the window. */
+  /** Per trading day in the window: total worth, invested holdings plus waiting cash. */
   value: Float64Array;
+  /** Per trading day: cash waiting to be invested (earning the T-bill rate). */
+  cash: Float64Array;
+  /** Per trading day: cumulative money that has arrived (out of pocket). */
   contributed: Float64Array;
-  /** Growth of $1 held through the window, unaffected by contributions (time-weighted). */
+  /** Per trading day: money that arrived that day. */
+  arrivals: Float64Array;
+  /** Per trading day: money moved from cash into the market that day. */
+  buys: Float64Array;
+  /** Growth of $1 held through the window, unaffected by new money (time-weighted). */
   growthIndex: Float64Array;
-  /** Amount invested per contribution under this strategy's timing. */
-  perContribution: number;
-  contributionCount: number;
+  /** Number of days with a purchase. */
+  buyCount: number;
+  /** For 'dip' timing: trading days in the window the mix was far enough below its high to buy. */
+  dipDays: number;
   summary: Summary;
 }
 
@@ -63,8 +90,12 @@ export interface Summary {
   realMoneyWeightedReturn: number;
   /** All contributions restated in end-date dollars. */
   contributedInEndDollars: number;
-  /** Amount-weighted average time each contributed dollar spent invested, in years. */
+  /** Amount-weighted average time each dollar spent in the market (not waiting in cash), in years. */
   averageYearsInvested: number;
+  /** Amount-weighted average time each dollar waited in cash before being invested (or until the end), in years. */
+  averageYearsWaiting: number;
+  /** Cash still waiting to be invested at the end. */
+  finalCash: number;
   /** Worst fall of the portfolio from a high (time-weighted, so new money can't hide it). */
   maxDrawdown: Drawdown;
   /** Most the portfolio was ever worth less than what had been put in (<= 0). */
@@ -105,12 +136,6 @@ export function simulate(market: Market, plan: Plan, strategy: Strategy, window 
   const startDay = days[startIndex]!;
   const endDay = days[endIndex]!;
 
-  // Same total budget for every timing: the plan's own schedule decides the total.
-  const recurringTotal = plan.amount * scheduleDays(startDay, endDay, plan.frequency).length;
-  if (!(plan.amount >= 0 && plan.initial >= 0 && recurringTotal + plan.initial > 0)) {
-    throw new SimulationError('Nothing to invest: set an amount above zero');
-  }
-
   // Window offset of the trading day each scheduled date executes on. A date that isn't
   // a trading day executes on the next one. Schedules are anchored to a real trading
   // day and capped at another, so every date lands inside the window.
@@ -119,19 +144,49 @@ export function simulate(market: Market, plan: Plan, strategy: Strategy, window 
     return sched.map((d) => (from = dayIndexOnOrAfter(days, d, from)) - startIndex);
   };
 
-  const flows = new Float64Array(n);
-  flows[0] = plan.initial;
-  let perContribution: number;
-  let contributionCount: number;
-  if (strategy.timing === 'lump') {
-    flows[0] += recurringTotal;
-    perContribution = recurringTotal;
-    contributionCount = 1;
+  // 1. When money arrives. Identical for every strategy compared under this plan.
+  const arrivals = new Float64Array(n);
+  const paydays = executionOffsets(scheduleDays(startDay, endDay, plan.frequency));
+  if (!(plan.amount >= 0 && plan.initial >= 0 && plan.amount * paydays.length + plan.initial > 0)) {
+    throw new SimulationError('Nothing to invest: set an amount above zero');
+  }
+  // With a raise, the amount steps up on each anniversary of the start, like a salary.
+  const anniversaries = scheduleDays(startDay, endDay, 'annually');
+  const raiseFactor = 1 + (plan.raise ?? 0) / 100;
+  if (!(raiseFactor > 0)) throw new SimulationError('The yearly raise must be above -100%');
+  let year = 0;
+  const pay = paydays.map((i) => {
+    while (year + 1 < anniversaries.length && anniversaries[year + 1]! <= days[startIndex + i]!) year++;
+    return plan.amount * Math.pow(raiseFactor, year);
+  });
+  const budget = pay.reduce((s, x) => s + x, 0);
+  arrivals[0] = plan.initial;
+  if (plan.funding === 'upfront') arrivals[0] += budget;
+  else paydays.forEach((i, k) => (arrivals[i]! += pay[k]!));
+
+  // 2. When the strategy invests. Each arrival is spread evenly over the strategy's buy
+  // dates before the next arrival: paid weekly and buying monthly invests everything
+  // waiting; paid monthly and buying weekly feeds the paycheck in over ~4 buys; a
+  // windfall bought monthly is classic dollar-cost averaging. buyShare[i] is the
+  // fraction of waiting cash to invest on day i.
+  const buyShare = new Float64Array(n);
+  let dipDays = 0;
+  if (strategy.timing === 'dip') {
+    // Buy-the-dip invests everything waiting on any day the mix is far enough down.
+    const inDip = dipMask(market, strategy, startIndex, endIndex);
+    for (let i = 0; i < n; i++) if (inDip[i]) (buyShare[i] = 1), dipDays++;
   } else {
-    const when = executionOffsets(scheduleDays(startDay, endDay, strategy.timing));
-    perContribution = recurringTotal / when.length;
-    contributionCount = when.length;
-    for (const i of when) flows[i]! += perContribution;
+    const buyDays = strategy.timing === 'lump' ? arrivalOffsets(arrivals) : executionOffsets(scheduleDays(startDay, endDay, strategy.timing));
+    const arrivalDays = arrivalOffsets(arrivals);
+    let a = 0;
+    for (let k = 0; k < buyDays.length; k++) {
+      const b = buyDays[k]!;
+      while (a < arrivalDays.length && arrivalDays[a]! <= b) a++;
+      const nextArrival = a < arrivalDays.length ? arrivalDays[a]! : n;
+      let remaining = 0;
+      for (let m = k; m < buyDays.length && buyDays[m]! < nextArrival; m++) remaining++;
+      buyShare[b] = 1 / remaining;
+    }
   }
 
   const rebalanceOn = new Uint8Array(n);
@@ -143,32 +198,47 @@ export function simulate(market: Market, plan: Plan, strategy: Strategy, window 
   const prices = weights.map(([id]) => market.assets[id].prices);
   const w = weights.map(([, x]) => x);
   const units = new Float64Array(weights.length);
+  // Waiting cash earns the T-bill rate (flat in synthetic test markets without cash).
+  const cashIndex = market.assets.cash?.prices;
 
   const value = new Float64Array(n);
+  const cashOut = new Float64Array(n);
   const contributed = new Float64Array(n);
+  const buys = new Float64Array(n);
   const growthIndex = new Float64Array(n);
   let prevValue = 0;
   let growth = 1;
   let cumulative = 0;
+  let cash = 0;
+  let buyCount = 0;
 
   for (let i = 0; i < n; i++) {
     const t = startIndex + i;
+    if (i > 0 && cashIndex) cash *= cashIndex[t]! / cashIndex[t - 1]!;
     // Yesterday's holdings at today's prices: the day's market move, before new money.
-    let pre = 0;
-    for (let j = 0; j < units.length; j++) pre += units[j]! * prices[j]![t]!;
+    let invested = 0;
+    for (let j = 0; j < units.length; j++) invested += units[j]! * prices[j]![t]!;
+    const pre = invested + cash;
     if (prevValue > 0) growth *= pre / prevValue;
 
-    const flow = flows[i]!;
-    if (flow > 0) {
-      for (let j = 0; j < units.length; j++) units[j]! += (flow * w[j]!) / prices[j]![t]!;
+    cash += arrivals[i]!;
+    cumulative += arrivals[i]!;
+
+    const buy = cash * buyShare[i]!;
+    if (buy > 0) {
+      for (let j = 0; j < units.length; j++) units[j]! += (buy * w[j]!) / prices[j]![t]!;
+      cash -= buy;
+      invested += buy;
+      buys[i] = buy;
+      buyCount++;
     }
-    const v = pre + flow;
-    if (rebalanceOn[i] && v > 0) {
-      for (let j = 0; j < units.length; j++) units[j] = (v * w[j]!) / prices[j]![t]!;
+    if (rebalanceOn[i] && invested > 0) {
+      for (let j = 0; j < units.length; j++) units[j] = (invested * w[j]!) / prices[j]![t]!;
     }
 
-    cumulative += flow;
+    const v = invested + cash;
     value[i] = v;
+    cashOut[i] = cash;
     contributed[i] = cumulative;
     growthIndex[i] = growth;
     prevValue = v;
@@ -178,19 +248,57 @@ export function simulate(market: Market, plan: Plan, strategy: Strategy, window 
     startIndex,
     endIndex,
     value,
+    cash: cashOut,
     contributed,
+    arrivals,
+    buys,
     growthIndex,
-    perContribution,
-    contributionCount,
-    summary: summarize(market, startIndex, flows, value, contributed, growthIndex),
+    buyCount,
+    dipDays,
+    summary: summarize(market, startIndex, arrivals, buys, value, cashOut, contributed, growthIndex),
   };
+}
+
+/**
+ * For each day in the window: is the strategy's mix at least dipPct% below its
+ * all-time high? The mix is tracked as a daily-rebalanced index of its assets from
+ * the first day they all have prices, so the "high" includes history before the
+ * window: starting in 2020 doesn't reset the S&P 500's high.
+ */
+function dipMask(market: Market, strategy: Strategy, startIndex: number, endIndex: number): Uint8Array {
+  const weights = weightsOf(strategy.allocation);
+  const prices = weights.map(([id]) => market.assets[id].prices);
+  const from = firstCommonIndex(
+    market,
+    weights.map(([id]) => id),
+  );
+  const threshold = 1 - (strategy.dipPct ?? DEFAULT_DIP_PCT) / 100;
+  const mask = new Uint8Array(endIndex - startIndex + 1);
+  let index = 1;
+  let high = 1;
+  for (let t = from + 1; t <= endIndex; t++) {
+    let r = 0;
+    for (let j = 0; j < weights.length; j++) r += weights[j]![1] * (prices[j]![t]! / prices[j]![t - 1]!);
+    index *= r;
+    if (index > high) high = index;
+    if (t >= startIndex && index <= high * threshold) mask[t - startIndex] = 1;
+  }
+  return mask;
+}
+
+function arrivalOffsets(arrivals: Float64Array): number[] {
+  const out: number[] = [];
+  for (let i = 0; i < arrivals.length; i++) if (arrivals[i]! > 0) out.push(i);
+  return out;
 }
 
 function summarize(
   market: Market,
   startIndex: number,
   flows: Float64Array,
+  buys: Float64Array,
   value: Float64Array,
+  cash: Float64Array,
   contributed: Float64Array,
   growthIndex: Float64Array,
 ): Summary {
@@ -201,18 +309,25 @@ function summarize(
   const finalValue = value[n - 1]!;
   const totalContributed = contributed[n - 1]!;
 
-  // Cash flows for XIRR: contributions out (negative), final value back (positive).
-  // The real version restates each contribution in end-date dollars.
+  // Cash flows for XIRR: money arriving (negative), final value back (positive). Using
+  // arrivals rather than purchases means time spent waiting in cash counts against the
+  // strategy, as it should. The real version restates each arrival in end-date dollars.
   const cpiEnd = cpiByDay[endIndex]!;
   const nominal: number[] = [];
   const real: number[] = [];
   const when: number[] = [];
   let contributedInEndDollars = 0;
   let dollarDays = 0;
+  let arrivalDollarDays = 0;
+  let bought = 0;
   for (let i = 0; i < n; i++) {
+    if (buys[i]! > 0) {
+      dollarDays += buys[i]! * (days[endIndex]! - days[startIndex + i]!);
+      bought += buys[i]!;
+    }
     const f = flows[i]!;
     if (f <= 0) continue;
-    dollarDays += f * (days[endIndex]! - days[startIndex + i]!);
+    arrivalDollarDays += f * (days[endIndex]! - days[startIndex + i]!);
     const inEndDollars = (f * cpiEnd) / cpiByDay[startIndex + i]!;
     nominal.push(-f);
     real.push(-inEndDollars);
@@ -238,9 +353,34 @@ function summarize(
     timeWeightedReturn: annualize(growthIndex[n - 1]!, span),
     realMoneyWeightedReturn: xirrDays(real, when),
     contributedInEndDollars,
-    averageYearsInvested: dollarDays / totalContributed / 365.25,
+    // Over all money that arrived; a dollar that never left cash counts as zero time invested.
+    averageYearsInvested: bought > 0 ? dollarDays / totalContributed / 365.25 : 0,
+    // Time since arrival minus time in the market = time spent waiting.
+    averageYearsWaiting: (arrivalDollarDays - dollarDays) / totalContributed / 365.25,
+    finalCash: cash[n - 1]!,
     maxDrawdown: maxDrawdown(growthIndex),
     worstShortfall,
     years: span / 365.25,
   };
+}
+
+/**
+ * A simulation restated in end-date dollars using CPI: each day's balance scaled by
+ * how much prices rose from that day to the end, and each arrival restated at the
+ * time it arrived (the purchasing power given up). The final balance is unchanged.
+ */
+export function inEndDollars(market: Market, sim: Simulation): { value: Float64Array; contributed: Float64Array } {
+  const { cpiByDay } = market;
+  const n = sim.value.length;
+  const cpiEnd = cpiByDay[sim.endIndex]!;
+  const value = new Float64Array(n);
+  const contributed = new Float64Array(n);
+  let total = 0;
+  for (let i = 0; i < n; i++) {
+    const factor = cpiEnd / cpiByDay[sim.startIndex + i]!;
+    total += sim.arrivals[i]! * factor;
+    value[i] = sim.value[i]! * factor;
+    contributed[i] = total;
+  }
+  return { value, contributed };
 }

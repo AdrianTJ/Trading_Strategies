@@ -4,7 +4,9 @@
 ("$100 every week since January 2020"), then compare strategies side by side on real market history:
 
 - **What you buy:** S&P 500 vs bonds vs an 80/20 mix, with or without gold, and so on
-- **When you buy:** weekly vs monthly vs quarterly, or everything on day one
+- **When you buy:** weekly vs monthly vs quarterly, right away, or only after the market drops 5–30%,
+  whether the money comes as a paycheck or a windfall, and optionally rising each year with a raise
+- **In today's money:** the value chart can restate every point in end-date dollars, so inflation is visible
 - **Was it the strategy or the dates?** The same plan re-run from every start month in history, so
   one lucky (or unlucky) window doesn't pass for a rule
 
@@ -21,13 +23,15 @@ npm run build      # static site in dist/
 
 ## How the numbers work
 
-- **Fair comparisons by construction.** Every strategy invests exactly the same total over the same
-  dates. Your amount × your schedule sets the total; other schedules split it evenly across their own
-  buy dates, and "all at once" puts it all in on day one. Without this, "weekly vs monthly" just
-  measures who put in more money.
-- **Buys happen at the start of each period.** "Every quarter" invests the quarter's budget on its first
-  day. That means less frequent schedules invest slightly earlier on average, which usually explains
-  the small gaps between them. The app says so instead of implying one schedule is smarter.
+- **Fair comparisons by construction.** Every strategy receives exactly the same money on the same
+  dates; they differ only in when they move it from cash into the market. Without this, "weekly vs
+  monthly" just measures who put in more money.
+- **When money arrives is part of the plan.** "As I earn it" pays your amount on your schedule, like a
+  paycheck; "all at the start" makes the whole amount available on day one, like a windfall. Each
+  strategy spreads every arrival evenly over its buy dates before the next one. Paid weekly and buying
+  monthly means saving up four weeks of pay; a windfall bought monthly is classic dollar-cost averaging.
+- **Waiting money earns T-bill interest** and counts toward the balance, and returns are measured from
+  when money arrives, so time spent waiting counts against a strategy.
 - **Total return.** Prices are real funds' dividend- and interest-adjusted closing prices, so income
   is reinvested.
 - **Annual return is money-weighted (XIRR).** Each dollar only earns credit for the time it was
@@ -61,6 +65,10 @@ A comparison only starts once every asset in it has data, and the page tells you
 
 `.github/workflows/deploy.yml` publishes `dist/` to GitHub Pages on every push to `main`.
 One-time setup: **Settings → Pages → Source: GitHub Actions**. The build uses relative paths, so any static host works.
+
+After each deploy, `scripts/smoke-test.mjs` checks that the live site is the built app (not raw source) and
+that its assets and data load; run it by hand with `npm run smoke -- <url>`. Keep `deploy.yml` the only
+workflow that publishes to Pages: two publishers race, and whichever finishes last wins.
 
 ## Layout
 
